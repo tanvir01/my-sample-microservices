@@ -39,7 +39,7 @@ public class Order {
     private String customerName;
 
     @NotNull
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     @JsonProperty("customer_email")
     private String customerEmail;
 
