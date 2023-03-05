@@ -1,6 +1,7 @@
 package com.tanservices.order;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,12 +25,36 @@ public class OrderService {
         return orderRepository.findById(id);
     }
 
-    public Order createOrder(Order order) {
+    public Order createOrder(OrderRequest orderRequest) {
+        Order order = Order.builder()
+                .customerName(orderRequest.customerName())
+                .customerEmail(orderRequest.customerEmail())
+                .shippingAddress(orderRequest.shippingAddress())
+                .totalAmount(orderRequest.totalAmount())
+                .status(orderRequest.status())
+                .build();
+
         return orderRepository.save(order);
     }
 
-    public Order updateOrder(Order order) {
-        return orderRepository.save(order);
+    public Order updateOrder(Optional<Order> existingOrder, OrderRequest orderRequest) {
+
+        String customerEmail = orderRequest.customerEmail();
+        Optional<Order> orderWithSameCustomerEmail = orderRepository.findByCustomerEmail(customerEmail);
+        if (orderWithSameCustomerEmail.isPresent() && !orderWithSameCustomerEmail.get().getId().equals(existingOrder.get().getId())) {
+            throw new DataIntegrityViolationException("Customer email already exists");
+        }
+
+        // Update the order
+        Order updatedOrder = existingOrder.get();
+        updatedOrder.setCustomerName(orderRequest.customerName());
+        updatedOrder.setCustomerEmail(customerEmail);
+        updatedOrder.setShippingAddress(orderRequest.shippingAddress());
+        updatedOrder.setTotalAmount(orderRequest.totalAmount());
+        updatedOrder.setStatus(orderRequest.status());
+        orderRepository.save(updatedOrder);
+
+        return updatedOrder;
     }
 
     public void deleteOrder(Long id) {

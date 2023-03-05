@@ -21,36 +21,29 @@ import org.jetbrains.annotations.NotNull;
 public class Order {
 
     @Id
-    @SequenceGenerator(
-            name = "order_id_sequence",
-            sequenceName = "order_id_sequence",
-            allocationSize=1
-    )
-    @GeneratedValue(
-            strategy = GenerationType.SEQUENCE,
-            generator = "order_id_sequence"
-    )
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "order_seq")
+    @SequenceGenerator(name = "order_seq", sequenceName = "order_seq", allocationSize = 1)
     @JsonProperty("id")
     private Long id;
 
     @NotNull
     @Column(nullable = false)
-    @JsonProperty("customer_name")
+    @JsonProperty("customerName")
     private String customerName;
 
     @NotNull
     @Column(nullable = false, unique = true)
-    @JsonProperty("customer_email")
+    @JsonProperty("customerEmail")
     private String customerEmail;
 
     @NotNull
     @Column(nullable = false)
-    @JsonProperty("shipping_address")
+    @JsonProperty("shippingAddress")
     private String shippingAddress;
 
     @NotNull
     @Column(nullable = false)
-    @JsonProperty("total_amount")
+    @JsonProperty("totalAmount")
     private Double totalAmount;
 
     @NotNull

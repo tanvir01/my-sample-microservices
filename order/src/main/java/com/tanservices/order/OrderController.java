@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -37,16 +36,16 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<Order> createOrder(@RequestBody Order order) {
-        Order newOrder = orderService.createOrder(order);
+    public ResponseEntity<?> createOrder(@RequestBody OrderRequest orderRequest) {
+        Order newOrder = orderService.createOrder(orderRequest);
         return new ResponseEntity<>(newOrder, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Order> updateOrder(@PathVariable Long id, @RequestBody Order order) {
+    public ResponseEntity<Order> updateOrder(@PathVariable Long id, @RequestBody OrderRequest orderRequest) {
         Optional<Order> existingOrder = orderService.getOrderById(id);
         if (existingOrder.isPresent()) {
-            Order updatedOrder = orderService.updateOrder(order);
+            Order updatedOrder = orderService.updateOrder(existingOrder, orderRequest);
             return new ResponseEntity<>(updatedOrder, HttpStatus.OK);
         } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
