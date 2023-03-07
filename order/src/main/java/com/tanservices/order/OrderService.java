@@ -26,6 +26,11 @@ public class OrderService {
     }
 
     public Order createOrder(OrderRequest orderRequest) {
+        Optional<Order> orderWithSameCustomerEmail = orderRepository.findByCustomerEmail(orderRequest.customerEmail());
+        if (orderWithSameCustomerEmail.isPresent()) {
+            throw new DataIntegrityViolationException("Customer email already exists");
+        }
+
         Order order = Order.builder()
                 .customerName(orderRequest.customerName())
                 .customerEmail(orderRequest.customerEmail())
