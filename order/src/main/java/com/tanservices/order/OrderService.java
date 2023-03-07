@@ -1,7 +1,6 @@
 package com.tanservices.order;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,37 +25,24 @@ public class OrderService {
     }
 
     public Order createOrder(OrderRequest orderRequest) {
-        Optional<Order> orderWithSameCustomerEmail = orderRepository.findByCustomerEmail(orderRequest.customerEmail());
-        if (orderWithSameCustomerEmail.isPresent()) {
-            throw new DataIntegrityViolationException("Customer email already exists");
-        }
-
         Order order = Order.builder()
                 .customerName(orderRequest.customerName())
                 .customerEmail(orderRequest.customerEmail())
                 .shippingAddress(orderRequest.shippingAddress())
                 .totalAmount(orderRequest.totalAmount())
-                .status(orderRequest.status())
+                .status(Order.OrderStatus.PENDING)
                 .build();
 
         return orderRepository.save(order);
     }
 
     public Order updateOrder(Optional<Order> existingOrder, OrderRequest orderRequest) {
-
-        String customerEmail = orderRequest.customerEmail();
-        Optional<Order> orderWithSameCustomerEmail = orderRepository.findByCustomerEmail(customerEmail);
-        if (orderWithSameCustomerEmail.isPresent() && !orderWithSameCustomerEmail.get().getId().equals(existingOrder.get().getId())) {
-            throw new DataIntegrityViolationException("Customer email already exists");
-        }
-
         // Update the order
         Order updatedOrder = existingOrder.get();
         updatedOrder.setCustomerName(orderRequest.customerName());
-        updatedOrder.setCustomerEmail(customerEmail);
+        updatedOrder.setCustomerEmail(orderRequest.customerEmail());
         updatedOrder.setShippingAddress(orderRequest.shippingAddress());
         updatedOrder.setTotalAmount(orderRequest.totalAmount());
-        updatedOrder.setStatus(orderRequest.status());
         orderRepository.save(updatedOrder);
 
         return updatedOrder;
