@@ -8,23 +8,27 @@ group = 'com.tanservices'
 version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '17'
 
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
 repositories {
 	mavenCentral()
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.kafka:spring-kafka'
 	implementation 'org.jetbrains:annotations:23.0.0'
-	implementation 'com.fasterxml.jackson.core:jackson-core:2.13.0'
-	implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.0'
-	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.0'
-	implementation "ch.qos.logback.contrib:logback-json-classic:0.1.5"
-	implementation "ch.qos.logback.contrib:logback-jackson:0.1.5"
-	compileOnly 'org.projectlombok:lombok:1.18.22'
-	annotationProcessor 'org.projectlombok:lombok:1.18.22'
+	implementation 'jakarta.validation:jakarta.validation-api:3.0.0'
+	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'org.postgresql:postgresql'
+	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.kafka:spring-kafka-test'
 }
 
 tasks.named('test') {
