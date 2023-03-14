@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.jetbrains.annotations.NotNull;
 
 @Entity
@@ -28,7 +29,7 @@ public class Shipment {
     @NotNull
     @Column(nullable = false, unique=true)
     @JsonProperty("orderId")
-    private String orderId;
+    private Long orderId;
 
     @NotNull
     @Column(nullable = false)
@@ -43,6 +44,7 @@ public class Shipment {
 
     @NotNull
     @Column(nullable = false)
+    @ColumnDefault("'NEW'")
     @Enumerated(EnumType.STRING)
     @JsonProperty("status")
     private ShipmentStatus status;
