@@ -22,6 +22,7 @@ dependencies {
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.0'
 	implementation "ch.qos.logback.contrib:logback-json-classic:0.1.5"
 	implementation "ch.qos.logback.contrib:logback-jackson:0.1.5"
+	implementation 'com.h2database:h2'
 	compileOnly 'org.projectlombok:lombok:1.18.22'
 	annotationProcessor 'org.projectlombok:lombok:1.18.22'
 	runtimeOnly 'org.postgresql:postgresql'
