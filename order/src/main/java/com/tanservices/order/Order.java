@@ -8,7 +8,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.jetbrains.annotations.NotNull;
+
+import static com.tanservices.order.Order.OrderStatus.PENDING;
 
 
 @Entity
@@ -17,7 +20,7 @@ import org.jetbrains.annotations.NotNull;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties(value = {"id"}, allowGetters=true)
+@JsonIgnoreProperties(value = {"id","status"}, allowGetters=true)
 public class Order {
 
     @Id
@@ -32,14 +35,9 @@ public class Order {
     private String customerName;
 
     @NotNull
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     @JsonProperty("customerEmail")
     private String customerEmail;
-
-    @NotNull
-    @Column(nullable = false)
-    @JsonProperty("shippingAddress")
-    private String shippingAddress;
 
     @NotNull
     @Column(nullable = false)
@@ -48,6 +46,7 @@ public class Order {
 
     @NotNull
     @Column(nullable = false)
+    @ColumnDefault("'PENDING'")
     @Enumerated(EnumType.STRING)
     @JsonProperty("status")
     private OrderStatus status;
