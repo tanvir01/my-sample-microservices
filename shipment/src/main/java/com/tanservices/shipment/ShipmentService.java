@@ -23,7 +23,8 @@ public class ShipmentService {
     }
 
     public Optional<Shipment> getShipmentById(Long id) {
-        return shipmentRepository.findById(id);
+        return Optional.ofNullable(shipmentRepository.findById(id)
+                .orElseThrow(() -> new ShipmentNotFoundException(id)));
     }
 
     public Shipment createShipment(ShipmentRequest shipmentRequest) {
@@ -45,10 +46,10 @@ public class ShipmentService {
         return shipmentRepository.save(shipment);
     }
 
-    public Shipment updateShipment(Shipment updatedShipment, ShipmentRequest shipmentRequest) {
+    public Shipment updateShipment(Long id, ShipmentRequest shipmentRequest) {
         // Check if the shipment exists with the given shipmentId
-        Shipment existingShipment = shipmentRepository.findById(updatedShipment.getId())
-                .orElseThrow(() -> new ShipmentNotFoundException("Shipment not found with id: " + updatedShipment.getId()));
+        Shipment existingShipment = shipmentRepository.findById(id)
+                .orElseThrow(() -> new ShipmentNotFoundException(id));
 
         // Check if the orderId has been updated in the request body
         Long orderId = shipmentRequest.orderId();
@@ -71,15 +72,17 @@ public class ShipmentService {
         }
 
         // Update the shipment
-        updatedShipment.setOrderId(shipmentRequest.orderId());
-        updatedShipment.setAddress(shipmentRequest.address());
-        updatedShipment.setTrackingCode(shipmentRequest.trackingCode());
-        shipmentRepository.save(updatedShipment);
+        existingShipment.setAddress(shipmentRequest.address());
+        shipmentRepository.save(existingShipment);
 
-        return updatedShipment;
+        return existingShipment;
     }
 
     public void deleteShipment(Long id) {
-        shipmentRepository.deleteById(id);
+        // Check if the shipment exists with the given shipmentId
+        Shipment existingShipment = shipmentRepository.findById(id)
+                .orElseThrow(() -> new ShipmentNotFoundException(id));
+
+        shipmentRepository.delete(existingShipment);
     }
 }
