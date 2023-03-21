@@ -146,8 +146,10 @@ public class ShipmentServiceIntegrationTest {
                 .build();
         shipmentRepository.save(existingShipment);
 
+        //when
         shipmentService.deleteShipment(existingShipment.getId());
 
+        //then
         Optional<Shipment> shipment = shipmentRepository.findById(existingShipment.getId());
         assertThat(shipment).isEmpty();
     }
