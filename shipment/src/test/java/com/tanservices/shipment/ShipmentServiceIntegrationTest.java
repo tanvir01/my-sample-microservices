@@ -134,4 +134,22 @@ public class ShipmentServiceIntegrationTest {
         assertThat(updatedShipment.getTrackingCode()).isEqualTo(shipmentRequest.trackingCode());
     }
 
+    @Test
+    @Transactional
+    public void testDeleteShipment() {
+        // given
+        Shipment existingShipment = Shipment.builder()
+                .orderId(1L)
+                .address("123 Main St")
+                .trackingCode("ABC123XYZ786")
+                .status(Shipment.ShipmentStatus.NEW)
+                .build();
+        shipmentRepository.save(existingShipment);
+
+        shipmentService.deleteShipment(existingShipment.getId());
+
+        Optional<Shipment> shipment = shipmentRepository.findById(existingShipment.getId());
+        assertThat(shipment).isEmpty();
+    }
+
 }
