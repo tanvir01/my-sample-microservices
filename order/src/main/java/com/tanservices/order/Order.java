@@ -8,7 +8,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.jetbrains.annotations.NotNull;
+
+import static com.tanservices.order.Order.OrderStatus.PENDING;
 
 
 @Entity
@@ -38,16 +41,12 @@ public class Order {
 
     @NotNull
     @Column(nullable = false)
-    @JsonProperty("shippingAddress")
-    private String shippingAddress;
-
-    @NotNull
-    @Column(nullable = false)
     @JsonProperty("totalAmount")
     private Double totalAmount;
 
     @NotNull
     @Column(nullable = false)
+    @ColumnDefault("'PENDING'")
     @Enumerated(EnumType.STRING)
     @JsonProperty("status")
     private OrderStatus status;

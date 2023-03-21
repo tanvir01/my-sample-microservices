@@ -28,7 +28,6 @@ public class OrderService {
         Order order = Order.builder()
                 .customerName(orderRequest.customerName())
                 .customerEmail(orderRequest.customerEmail())
-                .shippingAddress(orderRequest.shippingAddress())
                 .totalAmount(orderRequest.totalAmount())
                 .status(Order.OrderStatus.PENDING)
                 .build();
@@ -41,7 +40,6 @@ public class OrderService {
         Order updatedOrder = existingOrder.get();
         updatedOrder.setCustomerName(orderRequest.customerName());
         updatedOrder.setCustomerEmail(orderRequest.customerEmail());
-        updatedOrder.setShippingAddress(orderRequest.shippingAddress());
         updatedOrder.setTotalAmount(orderRequest.totalAmount());
         orderRepository.save(updatedOrder);
 
