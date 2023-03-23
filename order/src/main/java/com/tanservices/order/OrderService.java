@@ -1,5 +1,6 @@
 package com.tanservices.order;
 
+import com.tanservices.order.exception.OrderNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +22,8 @@ public class OrderService {
     }
 
     public Optional<Order> getOrderById(Long id) {
-        return orderRepository.findById(id);
+        return Optional.ofNullable(orderRepository.findById(id)
+                .orElseThrow(() -> new OrderNotFoundException(id)));
     }
 
     public Order createOrder(OrderRequest orderRequest) {
@@ -35,15 +37,18 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
-    public Order updateOrder(Optional<Order> existingOrder, OrderRequest orderRequest) {
-        // Update the order
-        Order updatedOrder = existingOrder.get();
-        updatedOrder.setCustomerName(orderRequest.customerName());
-        updatedOrder.setCustomerEmail(orderRequest.customerEmail());
-        updatedOrder.setTotalAmount(orderRequest.totalAmount());
-        orderRepository.save(updatedOrder);
+    public Order updateOrder(Long id, OrderRequest orderRequest) {
+        // Check if the shipment exists with the given shipmentId
+        Order existingOrder = orderRepository.findById(id)
+                .orElseThrow(() -> new OrderNotFoundException(id));
 
-        return updatedOrder;
+        // Update the order
+        existingOrder.setCustomerName(orderRequest.customerName());
+        existingOrder.setCustomerEmail(orderRequest.customerEmail());
+        existingOrder.setTotalAmount(orderRequest.totalAmount());
+        orderRepository.save(existingOrder);
+
+        return existingOrder;
     }
 
     public void deleteOrder(Long id) {
