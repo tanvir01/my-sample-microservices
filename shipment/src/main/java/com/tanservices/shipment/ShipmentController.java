@@ -7,7 +7,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @RestController
@@ -29,10 +28,7 @@ public class ShipmentController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Shipment> getShipmentById(@PathVariable Long id) {
-        Optional<Shipment> shipment = shipmentService.getShipmentById(id);
-        log.info("Shipment is {}", shipment);
-        return shipment.map(value -> new ResponseEntity<>(value, HttpStatus.OK))
-                .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        return ResponseEntity.ok(shipmentService.getShipmentById(id).get());
     }
 
     @PostMapping
@@ -43,23 +39,12 @@ public class ShipmentController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Shipment> updateShipment(@PathVariable Long id, @RequestBody ShipmentRequest shipmentRequest) {
-        Optional<Shipment> existingShipment = shipmentService.getShipmentById(id);
-        if (existingShipment.isPresent()) {
-            Shipment updateShipment = shipmentService.updateShipment(existingShipment.get(), shipmentRequest);
-            return new ResponseEntity<>(updateShipment, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+        return ResponseEntity.ok(shipmentService.updateShipment(id, shipmentRequest));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteShipment(@PathVariable Long id) {
-        Optional<Shipment> shipment = shipmentService.getShipmentById(id);
-        if (shipment.isPresent()) {
-            shipmentService.deleteShipment(id);
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+        shipmentService.deleteShipment(id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

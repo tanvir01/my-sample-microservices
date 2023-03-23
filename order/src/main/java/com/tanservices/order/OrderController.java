@@ -29,10 +29,7 @@ public class OrderController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Order> getOrderById(@PathVariable Long id) {
-        Optional<Order> order = orderService.getOrderById(id);
-        log.info("Order is {}",order);
-        return order.map(value -> new ResponseEntity<>(value, HttpStatus.OK))
-                .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        return ResponseEntity.ok(orderService.getOrderById(id).get());
     }
 
     @PostMapping
@@ -43,13 +40,7 @@ public class OrderController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Order> updateOrder(@PathVariable Long id, @RequestBody OrderRequest orderRequest) {
-        Optional<Order> existingOrder = orderService.getOrderById(id);
-        if (existingOrder.isPresent()) {
-            Order updatedOrder = orderService.updateOrder(existingOrder, orderRequest);
-            return new ResponseEntity<>(updatedOrder, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+        return ResponseEntity.ok(orderService.updateOrder(id, orderRequest));
     }
 
     @DeleteMapping("/{id}")
