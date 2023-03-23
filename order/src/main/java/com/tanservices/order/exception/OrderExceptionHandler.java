@@ -38,4 +38,11 @@ public class OrderExceptionHandler {
         OrderErrorResponse orderErrorResponse = new OrderErrorResponse(HttpStatus.BAD_REQUEST.value(), errorMessage);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(orderErrorResponse);
     }
+
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<OrderErrorResponse> handleShipmentNotFoundException(OrderNotFoundException ex) {
+        String errorMessage = "OrderNotFoundException: " + ex.getMessage();
+        OrderErrorResponse orderErrorResponse = new OrderErrorResponse(HttpStatus.NOT_FOUND.value(), errorMessage);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(orderErrorResponse);
+    }
 }
