@@ -2,6 +2,10 @@ package com.tanservices.shipment;
 
 import com.tanservices.shipment.exception.DuplicateShipmentException;
 import com.tanservices.shipment.exception.ShipmentNotFoundException;
+import com.tanservices.shipment.openfeign.OrderClient;
+import com.tanservices.shipment.openfeign.OrderStatus;
+import com.tanservices.shipment.openfeign.OrderStatusRequest;
+import feign.FeignException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -12,10 +16,12 @@ import java.util.Optional;
 public class ShipmentService {
 
     private final ShipmentRepository shipmentRepository;
+    private final OrderClient orderClient;
 
     @Autowired
-    public ShipmentService(ShipmentRepository shipmentRepository) {
+    public ShipmentService(ShipmentRepository shipmentRepository, OrderClient orderClient) {
         this.shipmentRepository = shipmentRepository;
+        this.orderClient = orderClient;
     }
 
     public List<Shipment> getAllShipments() {
@@ -36,12 +42,21 @@ public class ShipmentService {
             throw new DuplicateShipmentException("Shipment with trackingCode " + shipmentRequest.trackingCode() + " already exists");
         }
 
+        // build shipment
         Shipment shipment = Shipment.builder()
                 .orderId(shipmentRequest.orderId())
                 .address(shipmentRequest.address())
                 .trackingCode(shipmentRequest.trackingCode())
                 .status(Shipment.ShipmentStatus.NEW)
                 .build();
+
+        //update order status
+        try {
+            OrderStatusRequest orderStatusRequest = new OrderStatusRequest(OrderStatus.PROCESSING);
+            orderClient.updateOrderStatus(shipmentRequest.orderId(), orderStatusRequest);
+        } catch (FeignException ex) {
+            throw ex;
+        }
 
         return shipmentRepository.save(shipment);
     }

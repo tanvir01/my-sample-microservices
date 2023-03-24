@@ -1,5 +1,6 @@
 package com.tanservices.shipment.exception;
 
+import feign.FeignException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -52,5 +53,12 @@ public class ShipmentExceptionHandler {
         String errorMessage = "DuplicateShipmentException: " + ex.getMessage();
         ShipmentErrorResponse shipmentErrorResponse = new ShipmentErrorResponse(HttpStatus.CONFLICT.value(), errorMessage);
         return ResponseEntity.status(HttpStatus.CONFLICT).body(shipmentErrorResponse);
+    }
+
+    @ExceptionHandler(FeignException.class)
+    public ResponseEntity<ShipmentErrorResponse> handleFeignException(FeignException ex) {
+        String errorMessage = "FeignException: " + ex.getMessage();
+        ShipmentErrorResponse shipmentErrorResponse = new ShipmentErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), errorMessage);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(shipmentErrorResponse);
     }
 }

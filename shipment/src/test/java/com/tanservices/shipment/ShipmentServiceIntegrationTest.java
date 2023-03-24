@@ -2,15 +2,20 @@ package com.tanservices.shipment;
 
 import com.tanservices.shipment.exception.DuplicateShipmentException;
 import com.tanservices.shipment.exception.ShipmentNotFoundException;
+import com.tanservices.shipment.openfeign.OrderClient;
+import com.tanservices.shipment.openfeign.OrderStatus;
+import com.tanservices.shipment.openfeign.OrderStatusRequest;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -21,6 +26,9 @@ public class ShipmentServiceIntegrationTest {
 
     @Autowired
     private ShipmentRepository shipmentRepository;
+
+    @MockBean
+    private OrderClient orderClient;
 
     @Test
     public void testGetAllShipments() {
@@ -73,6 +81,9 @@ public class ShipmentServiceIntegrationTest {
         assertThat(shipment.getAddress()).isEqualTo(shipmentRequest.address());
         assertThat(shipment.getTrackingCode()).isEqualTo(shipmentRequest.trackingCode());
         assertThat(shipment.getStatus()).isEqualTo(Shipment.ShipmentStatus.NEW);
+
+        OrderStatusRequest orderStatusRequest = new OrderStatusRequest(OrderStatus.PROCESSING);
+        verify(orderClient).updateOrderStatus(shipmentRequest.orderId(), orderStatusRequest);
     }
 
     @Test
