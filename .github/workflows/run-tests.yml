@@ -13,7 +13,7 @@ jobs:
         with:
           java-version: '19'
           distribution: 'temurin'
-      - name: Build with Gradle
+      - name: Check with Gradle
         run: |
           cd order
           ./gradlew check
