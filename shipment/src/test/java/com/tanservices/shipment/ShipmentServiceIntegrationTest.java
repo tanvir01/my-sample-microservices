@@ -1,6 +1,7 @@
 package com.tanservices.shipment;
 
 import com.tanservices.shipment.exception.DuplicateShipmentException;
+import com.tanservices.shipment.exception.ShipmentNotFoundException;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -23,6 +25,17 @@ public class ShipmentServiceIntegrationTest {
     @Test
     public void testGetAllShipments() {
         assertThat(shipmentService.getAllShipments()).isEmpty();
+    }
+
+    @Test
+    public void testGetShipmentByIdNotFound() {
+        // given
+        Long nonExistentId = 999L;
+
+        // when & then
+        assertThrows(ShipmentNotFoundException.class, () -> {
+            shipmentService.getShipmentById(nonExistentId);
+        });
     }
 
     @Test
