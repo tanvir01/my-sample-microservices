@@ -55,5 +55,11 @@ public class OrderService {
         orderRepository.deleteById(id);
     }
 
+    public void updateOrderStatus(Long id, OrderStatusRequest orderStatusRequest) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new OrderNotFoundException(id));
+        order.setStatus(orderStatusRequest.status());
+        orderRepository.save(order);
+    }
 }
 
