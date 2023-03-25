@@ -61,4 +61,18 @@ public class ShipmentExceptionHandler {
         ShipmentErrorResponse shipmentErrorResponse = new ShipmentErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), errorMessage);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(shipmentErrorResponse);
     }
+
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<ShipmentErrorResponse> handleFeignException(OrderNotFoundException ex) {
+        String errorMessage = "OrderNotFoundException: " + ex.getMessage();
+        ShipmentErrorResponse shipmentErrorResponse = new ShipmentErrorResponse(HttpStatus.NOT_FOUND.value(), errorMessage);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(shipmentErrorResponse);
+    }
+
+    @ExceptionHandler(InvalidStatusUpdateException.class)
+    public ResponseEntity<ShipmentErrorResponse> handleFeignException(InvalidStatusUpdateException ex) {
+        String errorMessage = "InvalidStatusUpdateException: " + ex.getMessage();
+        ShipmentErrorResponse shipmentErrorResponse = new ShipmentErrorResponse(HttpStatus.BAD_REQUEST.value(), errorMessage);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(shipmentErrorResponse);
+    }
 }
