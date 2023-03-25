@@ -115,6 +115,27 @@ public class OrderServiceIntegrationTest {
 
     @Test
     @Transactional
+    public void testUpdateOrderStatus() {
+        // given
+        Order order = new Order();
+        order.setCustomerName("John Doe");
+        order.setCustomerEmail("john.doe@example.com");
+        order.setTotalAmount(100.00);
+        order.setStatus(Order.OrderStatus.PENDING);
+        order = orderRepository.save(order);
+
+        OrderStatusRequest orderStatusRequest = new OrderStatusRequest(Order.OrderStatus.PROCESSING);
+
+        // when
+        orderService.updateOrderStatus(order.getId(), orderStatusRequest);
+
+        // then
+        order = orderRepository.findById(order.getId()).get();
+        assertThat(order.getStatus()).isEqualTo(Order.OrderStatus.PROCESSING);
+    }
+
+    @Test
+    @Transactional
     public void testDeleteOrder() {
         // given
         Order existingOrder = new Order();
