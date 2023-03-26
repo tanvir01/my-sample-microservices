@@ -37,9 +37,22 @@ public class ShipmentController {
         return new ResponseEntity<>(newShipment, HttpStatus.CREATED);
     }
 
+    @PostMapping("/{orderId}/cancel-by-order")
+    public ResponseEntity<Void> cancelShipmentByOrderId(@PathVariable Long orderId) {
+        shipmentService.markShipmentCancelledByOrderId(orderId);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<Shipment> updateShipment(@PathVariable Long id, @RequestBody ShipmentRequest shipmentRequest) {
         return ResponseEntity.ok(shipmentService.updateShipment(id, shipmentRequest));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Void> updateShipmentStatus(@PathVariable Long id, @RequestBody ShipmentStatusRequest shipmentStatusRequest) {
+        log.info(String.valueOf(shipmentStatusRequest));
+        shipmentService.updateShipmentStatus(id, shipmentStatusRequest);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")

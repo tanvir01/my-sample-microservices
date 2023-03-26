@@ -17,7 +17,7 @@ import org.jetbrains.annotations.NotNull;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties(value = {"id","status"}, allowGetters=true)
+@JsonIgnoreProperties(value = {"id"}, allowGetters=true)
 public class Shipment {
 
     @Id
@@ -51,6 +51,8 @@ public class Shipment {
 
     public enum ShipmentStatus {
         NEW,
-        COMPLETED
+        COMPLETED,
+        LOST,
+        CANCELLED
     }
 }

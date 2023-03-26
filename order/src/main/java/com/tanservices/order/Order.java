@@ -20,7 +20,7 @@ import static com.tanservices.order.Order.OrderStatus.PENDING;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties(value = {"id","status"}, allowGetters=true)
+@JsonIgnoreProperties(value = {"id"}, allowGetters=true)
 public class Order {
 
     @Id

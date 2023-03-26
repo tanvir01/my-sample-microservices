@@ -43,6 +43,13 @@ public class OrderController {
         return ResponseEntity.ok(orderService.updateOrder(id, orderRequest));
     }
 
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Void> updateOrderStatus(@PathVariable Long id, @RequestBody OrderStatusRequest orderStatusRequest) {
+        log.info(String.valueOf(orderStatusRequest));
+        orderService.updateOrderStatus(id, orderStatusRequest);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
         Optional<Order> order = orderService.getOrderById(id);
