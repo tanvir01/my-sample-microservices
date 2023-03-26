@@ -118,6 +118,10 @@ public class ShipmentService {
         existingShipment.setAddress(shipmentRequest.address());
         shipmentRepository.save(existingShipment);
 
+        //send notification
+        sendNotificationToKafka(existingShipment, "Shipment with tracking code: " +
+                existingShipment.getTrackingCode() + "has been updated");
+
         return existingShipment;
     }
 
@@ -127,6 +131,10 @@ public class ShipmentService {
                 .orElseThrow(() -> new ShipmentNotFoundException(id));
 
         shipmentRepository.delete(existingShipment);
+
+        //send notification
+        sendNotificationToKafka(existingShipment, "Shipment with tracking code: " +
+                existingShipment.getTrackingCode() + "has been deleted");
     }
 
     public void markShipmentCancelledByOrderId(Long orderId) {
@@ -135,6 +143,10 @@ public class ShipmentService {
 
         existingShipment.setStatus(Shipment.ShipmentStatus.CANCELLED);
         shipmentRepository.save(existingShipment);
+
+        //send notification
+        sendNotificationToKafka(existingShipment, "Shipment with tracking code: " +
+                                existingShipment.getTrackingCode() + "has been CANCELLED");
     }
 
     public void updateShipmentStatus(Long id, ShipmentStatusRequest shipmentStatusRequest) {
@@ -155,6 +167,10 @@ public class ShipmentService {
         }
 
         shipmentRepository.save(existingShipment);
+
+        //send notification
+        sendNotificationToKafka(existingShipment, "Shipment with tracking code: " +
+                existingShipment.getTrackingCode() + "has been updated to status: " + existingShipment.getStatus());
     }
 
     private void updateOrderStatus(Long orderId, OrderStatus orderStatus) {
