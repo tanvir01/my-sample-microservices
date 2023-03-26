@@ -1,6 +1,10 @@
 package com.tanservices.order;
 
+import com.tanservices.order.exception.InvalidStatusUpdateException;
 import com.tanservices.order.exception.OrderNotFoundException;
+import com.tanservices.order.openfeign.ShipmentClient;
+import feign.FeignException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -8,13 +12,17 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class OrderService {
 
     private final OrderRepository orderRepository;
 
+    private final ShipmentClient shipmentClient;
+
     @Autowired
-    public OrderService(OrderRepository orderRepository) {
+    public OrderService(OrderRepository orderRepository, ShipmentClient shipmentClient) {
         this.orderRepository = orderRepository;
+        this.shipmentClient = shipmentClient;
     }
 
     public List<Order> getAllOrders() {
@@ -56,10 +64,33 @@ public class OrderService {
     }
 
     public void updateOrderStatus(Long id, OrderStatusRequest orderStatusRequest) {
+        // Do not allow order status to updated as COMPLETED by customer
+        if (orderStatusRequest.status() == Order.OrderStatus.COMPLETED) {
+            throw new InvalidStatusUpdateException("You cannot update order status to be COMPLETED directly." +
+                    "The shipment needs to be COMPLETED.");
+        }
+
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException(id));
+
+        if (orderStatusRequest.status() == Order.OrderStatus.CANCELLED) {
+            cancelShipment(id);
+        }
+
         order.setStatus(orderStatusRequest.status());
         orderRepository.save(order);
+    }
+
+    private void cancelShipment(Long orderId) {
+        try {
+            shipmentClient.markShipmentCancelled(orderId);
+        } catch (FeignException ex) {
+            if (ex.status() == 404) {
+                log.info("There is no shipment for orderId: " + orderId);
+            } else {
+                throw ex;
+            }
+        }
     }
 }
 
