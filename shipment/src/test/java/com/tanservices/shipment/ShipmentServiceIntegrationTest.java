@@ -37,8 +37,6 @@ public class ShipmentServiceIntegrationTest {
     @MockBean
     private KafkaTemplate<String, NotificationDto> kafkaTemplate;
 
-
-
     @Test
     public void testGetAllShipments() {
         assertThat(shipmentService.getAllShipments()).isEmpty();

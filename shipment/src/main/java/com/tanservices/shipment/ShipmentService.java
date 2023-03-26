@@ -76,7 +76,7 @@ public class ShipmentService {
         shipment = shipmentRepository.save(shipment);
 
         //send notification
-        sendNotificationToKafka(shipment, "Shipment Created.");
+        sendNotificationToKafka(shipment, "Shipment created with tracking code: " + shipment.getTrackingCode());
 
         return shipment;
     }
