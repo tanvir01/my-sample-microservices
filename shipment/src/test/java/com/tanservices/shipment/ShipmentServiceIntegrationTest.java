@@ -2,6 +2,7 @@ package com.tanservices.shipment;
 
 import com.tanservices.shipment.exception.DuplicateShipmentException;
 import com.tanservices.shipment.exception.ShipmentNotFoundException;
+import com.tanservices.shipment.kafka.NotificationDto;
 import com.tanservices.shipment.openfeign.Order;
 import com.tanservices.shipment.openfeign.OrderClient;
 import com.tanservices.shipment.openfeign.OrderStatus;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,6 +33,10 @@ public class ShipmentServiceIntegrationTest {
 
     @MockBean
     private OrderClient orderClient;
+
+    @MockBean
+    private KafkaTemplate<String, NotificationDto> kafkaTemplate;
+
 
 
     @Test
@@ -229,6 +235,4 @@ public class ShipmentServiceIntegrationTest {
         updatedShipment = (shipmentRepository.findById(existingShipment.getId())).get();
         assertThat(updatedShipment.getStatus()).isEqualTo(Shipment.ShipmentStatus.CANCELLED);
     }
-
-
 }

@@ -4,27 +4,38 @@ import com.tanservices.shipment.exception.DuplicateShipmentException;
 import com.tanservices.shipment.exception.InvalidStatusUpdateException;
 import com.tanservices.shipment.exception.OrderNotFoundException;
 import com.tanservices.shipment.exception.ShipmentNotFoundException;
+import com.tanservices.shipment.kafka.NotificationDto;
 import com.tanservices.shipment.openfeign.Order;
 import com.tanservices.shipment.openfeign.OrderClient;
 import com.tanservices.shipment.openfeign.OrderStatus;
 import com.tanservices.shipment.openfeign.OrderStatusRequest;
 import feign.FeignException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class ShipmentService {
 
     private final ShipmentRepository shipmentRepository;
     private final OrderClient orderClient;
 
+    private final KafkaTemplate<String, NotificationDto> kafkaTemplate;
+
+    private static final String TOPIC = "notificationTopic";
+
     @Autowired
-    public ShipmentService(ShipmentRepository shipmentRepository, OrderClient orderClient) {
+    public ShipmentService(ShipmentRepository shipmentRepository, OrderClient orderClient, KafkaTemplate<String, NotificationDto> kafkaTemplate) {
         this.shipmentRepository = shipmentRepository;
         this.orderClient = orderClient;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     public List<Shipment> getAllShipments() {
@@ -62,7 +73,12 @@ public class ShipmentService {
         //update order status
         updateOrderStatus(shipmentRequest.orderId(), OrderStatus.PROCESSING);
 
-        return shipmentRepository.save(shipment);
+        shipment = shipmentRepository.save(shipment);
+
+        //send notification
+        sendNotificationToKafka(shipment, "Shipment Created.");
+
+        return shipment;
     }
 
     public Shipment updateShipment(Long id, ShipmentRequest shipmentRequest) {
@@ -157,5 +173,13 @@ public class ShipmentService {
                 throw ex;
             }
         }
+    }
+
+    private void sendNotificationToKafka(Shipment shipment, String message) {
+        String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
+        NotificationDto notificationDto = new NotificationDto(shipment.getOrderId(), shipment.getId(), message);
+        log.info("Sending payload to kafka for shipment id: " + shipment.getId() + " with message: " +
+                message + " at timestamp " + timeStamp);
+        kafkaTemplate.send(TOPIC, timeStamp, notificationDto);
     }
 }
