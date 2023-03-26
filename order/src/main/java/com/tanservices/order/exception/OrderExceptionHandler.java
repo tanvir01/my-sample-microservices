@@ -1,5 +1,6 @@
 package com.tanservices.order.exception;
 
+import feign.FeignException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,5 +45,19 @@ public class OrderExceptionHandler {
         String errorMessage = "OrderNotFoundException: " + ex.getMessage();
         OrderErrorResponse orderErrorResponse = new OrderErrorResponse(HttpStatus.NOT_FOUND.value(), errorMessage);
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(orderErrorResponse);
+    }
+
+    @ExceptionHandler(FeignException.class)
+    public ResponseEntity<OrderErrorResponse> handleFeignException(FeignException ex) {
+        String errorMessage = "FeignException: " + ex.getMessage();
+        OrderErrorResponse shipmentErrorResponse = new OrderErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), errorMessage);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(shipmentErrorResponse);
+    }
+
+    @ExceptionHandler(InvalidStatusUpdateException.class)
+    public ResponseEntity<OrderErrorResponse> handleFeignException(InvalidStatusUpdateException ex) {
+        String errorMessage = "InvalidStatusUpdateException: " + ex.getMessage();
+        OrderErrorResponse shipmentErrorResponse = new OrderErrorResponse(HttpStatus.BAD_REQUEST.value(), errorMessage);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(shipmentErrorResponse);
     }
 }
