@@ -92,5 +92,13 @@ public class OrderService {
             }
         }
     }
+
+    public void markOrderCompleted(Long id) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new OrderNotFoundException(id));
+
+        order.setStatus(Order.OrderStatus.COMPLETED);
+        orderRepository.save(order);
+    }
 }
 
