@@ -17,6 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -57,13 +58,7 @@ public class ShipmentServiceIntegrationTest {
     @Transactional
     public void testGetShipmentById() {
         // given
-        Shipment shipment = Shipment.builder()
-                .orderId(1L)
-                .address("123 Main St")
-                .trackingCode("ABC123XYZ786")
-                .status(Shipment.ShipmentStatus.NEW)
-                .build();
-        shipmentRepository.save(shipment);
+        Shipment shipment = createDummyShipment();
 
         // when
         Optional<Shipment> foundShipment = shipmentService.getShipmentById(shipment.getId());
@@ -102,13 +97,7 @@ public class ShipmentServiceIntegrationTest {
     @Transactional
     public void testCreateShipmentWithDuplicateOrderId() {
         // given
-        Shipment existingShipment = Shipment.builder()
-                .orderId(1L)
-                .address("123 Main St")
-                .trackingCode("ABC123XYZ786")
-                .status(Shipment.ShipmentStatus.NEW)
-                .build();
-        shipmentRepository.save(existingShipment);
+        Shipment existingShipment = createDummyShipment();
 
         ShipmentRequest shipmentRequest = new ShipmentRequest(existingShipment.getOrderId(), "456 Elm St", "DEF456");
 
@@ -122,13 +111,7 @@ public class ShipmentServiceIntegrationTest {
     @Transactional
     public void testCreateShipmentWithDuplicateTrackingCode() {
         // given
-        Shipment existingShipment = Shipment.builder()
-                .orderId(1L)
-                .address("123 Main St")
-                .trackingCode("ABC123XYZ786")
-                .status(Shipment.ShipmentStatus.NEW)
-                .build();
-        shipmentRepository.save(existingShipment);
+        Shipment existingShipment = createDummyShipment();
 
         ShipmentRequest shipmentRequest = new ShipmentRequest(2L, "456 Elm St", existingShipment.getTrackingCode());
 
@@ -142,13 +125,7 @@ public class ShipmentServiceIntegrationTest {
     @Transactional
     public void testUpdateShipment() {
         // given
-        Shipment existingShipment = Shipment.builder()
-                .orderId(1L)
-                .address("123 Main St")
-                .trackingCode("ABC123XYZ786")
-                .status(Shipment.ShipmentStatus.NEW)
-                .build();
-        shipmentRepository.save(existingShipment);
+        Shipment existingShipment = createDummyShipment();
 
         Long orderId = 2L;
         Order order = new Order(orderId, "John Doe", "john@gmail.com", 223.0, OrderStatus.PENDING);
@@ -172,13 +149,7 @@ public class ShipmentServiceIntegrationTest {
     @Transactional
     public void testUpdateShipmentStatus() {
         // given
-        Shipment existingShipment = Shipment.builder()
-                .orderId(1L)
-                .address("123 Main St")
-                .trackingCode("ABC123XYZ786")
-                .status(Shipment.ShipmentStatus.NEW)
-                .build();
-        shipmentRepository.save(existingShipment);
+        Shipment existingShipment = createDummyShipment();
 
         // when
         ShipmentStatusRequest request = new ShipmentStatusRequest(Shipment.ShipmentStatus.COMPLETED);
@@ -194,13 +165,7 @@ public class ShipmentServiceIntegrationTest {
     @Transactional
     public void testDeleteShipment() {
         // given
-        Shipment existingShipment = Shipment.builder()
-                .orderId(1L)
-                .address("123 Main St")
-                .trackingCode("ABC123XYZ786")
-                .status(Shipment.ShipmentStatus.NEW)
-                .build();
-        shipmentRepository.save(existingShipment);
+        Shipment existingShipment = createDummyShipment();
 
         //when
         shipmentService.deleteShipment(existingShipment.getId());
@@ -214,23 +179,26 @@ public class ShipmentServiceIntegrationTest {
     @Transactional
     public void testMarkShipmentCancelledByOrderId() {
         // given
-        Long orderId = 1L;
+        Shipment existingShipment = createDummyShipment();
+
+        // when
+        shipmentService.markShipmentCancelledByOrderId(existingShipment.getOrderId());
+
+        // then
+        Shipment updatedShipment = (shipmentRepository.findById(existingShipment.getId())).get();
+        assertThat(updatedShipment.getStatus()).isEqualTo(Shipment.ShipmentStatus.CANCELLED);
+    }
+
+    private Shipment createDummyShipment() {
         Shipment existingShipment = Shipment.builder()
-                .orderId(orderId)
+                .orderId(1L)
                 .address("123 Main St")
                 .trackingCode("ABC123XYZ786")
                 .status(Shipment.ShipmentStatus.NEW)
                 .build();
         shipmentRepository.save(existingShipment);
 
-        Shipment updatedShipment = (shipmentRepository.findById(existingShipment.getId())).get();
-        assertThat(updatedShipment.getStatus()).isEqualTo(Shipment.ShipmentStatus.NEW);
-
-        // when
-        shipmentService.markShipmentCancelledByOrderId(orderId);
-
-        // then
-        updatedShipment = (shipmentRepository.findById(existingShipment.getId())).get();
-        assertThat(updatedShipment.getStatus()).isEqualTo(Shipment.ShipmentStatus.CANCELLED);
+        return existingShipment;
     }
+
 }

@@ -10,4 +10,7 @@ public interface OrderClient {
     Order getOrderById(@PathVariable("orderId") Long id);
     @RequestMapping(method = RequestMethod.PATCH, value = "/{orderId}/status")
     void updateOrderStatus(@PathVariable("orderId") Long orderId, @RequestBody OrderStatusRequest orderStatusRequest);
+
+    @RequestMapping(method = RequestMethod.POST, value = "/{orderId}/mark-completed")
+    void markOrderCompleted(@PathVariable("orderId") Long orderId);
 }

@@ -163,7 +163,7 @@ public class ShipmentService {
 
         //if shipment completed, mark order completed
         if(existingShipment.getStatus() == Shipment.ShipmentStatus.COMPLETED) {
-            updateOrderStatus(existingShipment.getOrderId(), OrderStatus.COMPLETED);
+            orderClient.markOrderCompleted(existingShipment.getOrderId());
         }
 
         shipmentRepository.save(existingShipment);
