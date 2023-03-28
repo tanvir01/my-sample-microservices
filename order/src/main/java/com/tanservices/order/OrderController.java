@@ -38,6 +38,12 @@ public class OrderController {
         return new ResponseEntity<>(newOrder, HttpStatus.CREATED);
     }
 
+    @PostMapping("/{id}/mark-completed")
+    public ResponseEntity<Void> cancelShipmentByOrderId(@PathVariable Long id) {
+        orderService.markOrderCompleted(id);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<Order> updateOrder(@PathVariable Long id, @RequestBody OrderRequest orderRequest) {
         return ResponseEntity.ok(orderService.updateOrder(id, orderRequest));

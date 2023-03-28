@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
@@ -26,12 +27,7 @@ public class OrderServiceIntegrationTest {
     @Transactional
     public void testGetAllOrders() {
         // given
-        Order order1 = new Order();
-        order1.setCustomerName("John Doe");
-        order1.setCustomerEmail("john.doe@example.com");
-        order1.setTotalAmount(110.30);
-        order1.setStatus(Order.OrderStatus.PENDING);
-        orderRepository.save(order1);
+        Order order1 = createDummyOrder();
 
         Order order2 = new Order();
         order2.setCustomerName("Jane Doe");
@@ -51,12 +47,7 @@ public class OrderServiceIntegrationTest {
     @Transactional
     public void testGetOrderById() {
         // given
-        Order order = new Order();
-        order.setCustomerName("John Doe");
-        order.setCustomerEmail("john.doe@example.com");
-        order.setTotalAmount(100.00);
-        order.setStatus(Order.OrderStatus.PENDING);
-        order = orderRepository.save(order);
+        Order order = createDummyOrder();
 
         // when
         Optional<Order> foundOrder = orderService.getOrderById(order.getId());
@@ -94,12 +85,7 @@ public class OrderServiceIntegrationTest {
     @Transactional
     public void testUpdateOrder() {
         // given
-        Order existingOrder = new Order();
-        existingOrder.setCustomerName("John Doe");
-        existingOrder.setCustomerEmail("john.doe@example.com");
-        existingOrder.setTotalAmount(100.00);
-        existingOrder.setStatus(Order.OrderStatus.PENDING);
-        existingOrder = orderRepository.save(existingOrder);
+        Order existingOrder = createDummyOrder();
 
         Long id = existingOrder.getId();
         OrderRequest orderRequest = new OrderRequest("Jane Doe", "jane.doe@example.com", 200.00);
@@ -117,12 +103,7 @@ public class OrderServiceIntegrationTest {
     @Transactional
     public void testUpdateOrderStatus() {
         // given
-        Order order = new Order();
-        order.setCustomerName("John Doe");
-        order.setCustomerEmail("john.doe@example.com");
-        order.setTotalAmount(100.00);
-        order.setStatus(Order.OrderStatus.PENDING);
-        order = orderRepository.save(order);
+        Order order = createDummyOrder();
 
         OrderStatusRequest orderStatusRequest = new OrderStatusRequest(Order.OrderStatus.PROCESSING);
 
@@ -138,12 +119,7 @@ public class OrderServiceIntegrationTest {
     @Transactional
     public void testDeleteOrder() {
         // given
-        Order existingOrder = new Order();
-        existingOrder.setCustomerName("John Doe");
-        existingOrder.setCustomerEmail("john.doe@example.com");
-        existingOrder.setTotalAmount(100.00);
-        existingOrder.setStatus(Order.OrderStatus.PENDING);
-        existingOrder = orderRepository.save(existingOrder);
+        Order existingOrder = createDummyOrder();
 
         Long orderId = existingOrder.getId();
 
@@ -153,5 +129,32 @@ public class OrderServiceIntegrationTest {
         // then
         Optional<Order> deleted = orderRepository.findById(orderId);
         assertThat(deleted).isEmpty();
+    }
+
+    @Test
+    @Transactional
+    public void markOrderCompletedTest() {
+        // given
+        Order existingOrder = createDummyOrder();
+
+        // when
+        orderService.markOrderCompleted(existingOrder.getId());
+
+        // retrieve the updated order from the test database and assert that its status has been updated to COMPLETED
+        Order updatedOrder = orderRepository.findById(existingOrder.getId()).get();
+
+        //then
+        assertEquals(Order.OrderStatus.COMPLETED, updatedOrder.getStatus());
+    }
+
+    private Order createDummyOrder() {
+        Order existingOrder = new Order();
+        existingOrder.setCustomerName("John Doe");
+        existingOrder.setCustomerEmail("john.doe@example.com");
+        existingOrder.setTotalAmount(100.00);
+        existingOrder.setStatus(Order.OrderStatus.PENDING);
+        existingOrder = orderRepository.save(existingOrder);
+
+        return existingOrder;
     }
 }
