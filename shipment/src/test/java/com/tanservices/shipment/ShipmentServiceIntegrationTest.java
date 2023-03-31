@@ -17,7 +17,6 @@ import org.springframework.test.context.ActiveProfiles;
 import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -193,6 +192,7 @@ public class ShipmentServiceIntegrationTest {
         Shipment existingShipment = Shipment.builder()
                 .orderId(1L)
                 .address("123 Main St")
+                .customerEmail("random@gmail.com")
                 .trackingCode("ABC123XYZ786")
                 .status(Shipment.ShipmentStatus.NEW)
                 .build();
