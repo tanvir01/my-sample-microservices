@@ -17,7 +17,7 @@ import org.jetbrains.annotations.NotNull;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties(value = {"id"}, allowGetters=true)
+@JsonIgnoreProperties(value = {"id","customerEmail"}, allowGetters=true)
 public class Shipment {
 
     @Id
@@ -35,6 +35,11 @@ public class Shipment {
     @Column(nullable = false)
     @JsonProperty("address")
     private String address;
+
+    @NotNull
+    @Column(nullable = false)
+    @JsonProperty("customerEmail")
+    private String customerEmail;
 
     @NotNull
     @Column(nullable = false, unique=true)

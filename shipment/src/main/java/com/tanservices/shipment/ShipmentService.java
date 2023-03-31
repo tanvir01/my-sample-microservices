@@ -12,6 +12,7 @@ import com.tanservices.shipment.openfeign.OrderStatusRequest;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +30,8 @@ public class ShipmentService {
 
     private final KafkaTemplate<String, NotificationDto> kafkaTemplate;
 
-    private static final String TOPIC = "notificationTopic";
+    @Value("${spring.kafka.notification-topic}")
+    private String noticationTopic;
 
     @Autowired
     public ShipmentService(ShipmentRepository shipmentRepository, OrderClient orderClient, KafkaTemplate<String, NotificationDto> kafkaTemplate) {
@@ -66,6 +68,7 @@ public class ShipmentService {
         Shipment shipment = Shipment.builder()
                 .orderId(order.get().id())
                 .address(shipmentRequest.address())
+                .customerEmail(order.get().customerEmail())
                 .trackingCode(shipmentRequest.trackingCode())
                 .status(Shipment.ShipmentStatus.NEW)
                 .build();
@@ -193,9 +196,10 @@ public class ShipmentService {
 
     private void sendNotificationToKafka(Shipment shipment, String message) {
         String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
-        NotificationDto notificationDto = new NotificationDto(shipment.getOrderId(), shipment.getId(), message);
+        NotificationDto notificationDto = new NotificationDto(shipment.getOrderId(), shipment.getId(),
+                                                                shipment.getCustomerEmail(), message);
         log.info("Sending payload to kafka for shipment id: " + shipment.getId() + " with message: " +
                 message + " at timestamp " + timeStamp);
-        kafkaTemplate.send(TOPIC, timeStamp, notificationDto);
+        kafkaTemplate.send(noticationTopic, timeStamp, notificationDto);
     }
 }
