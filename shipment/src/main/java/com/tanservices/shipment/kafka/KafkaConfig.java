@@ -21,7 +21,7 @@ public class KafkaConfig {
     private String bootstrapServersConfig;
 
     @Bean
-    public ProducerFactory<String, Shipment> producerFactory()
+    public ProducerFactory<String, NotificationDto> producerFactory()
     {
         Map<String, Object> config = new HashMap<>();
 
