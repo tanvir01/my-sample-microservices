@@ -8,11 +8,13 @@ import com.tanservices.shipment.openfeign.OrderClient;
 import com.tanservices.shipment.openfeign.OrderStatus;
 import com.tanservices.shipment.openfeign.OrderStatusRequest;
 import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.statemachine.StateMachine;
 import org.springframework.test.context.ActiveProfiles;
 import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,11 +33,19 @@ public class ShipmentServiceIntegrationTest {
     @Autowired
     private ShipmentRepository shipmentRepository;
 
+    @Autowired
+    private StateMachine<ShipmentStatus, String> stateMachine;
+
     @MockBean
     private OrderClient orderClient;
 
     @MockBean
     private KafkaTemplate<String, NotificationDto> kafkaTemplate;
+
+    @AfterEach
+    public void afterEach() {
+        shipmentRepository.deleteAll();
+    }
 
     @Test
     public void testGetAllShipments() {
@@ -86,7 +96,7 @@ public class ShipmentServiceIntegrationTest {
         assertThat(shipment.getOrderId()).isEqualTo(orderId);
         assertThat(shipment.getTrackingCode()).isEqualTo(trackingCode);
         assertThat(shipment.getAddress()).isEqualTo(address);
-        assertThat(shipment.getStatus()).isEqualTo(Shipment.ShipmentStatus.NEW);
+        assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.NEW);
 
         OrderStatusRequest orderStatusRequest = new OrderStatusRequest(OrderStatus.PROCESSING);
         verify(orderClient).updateOrderStatus(orderId, orderStatusRequest);
@@ -151,12 +161,12 @@ public class ShipmentServiceIntegrationTest {
         Shipment existingShipment = createDummyShipment();
 
         // when
-        ShipmentStatusRequest request = new ShipmentStatusRequest(Shipment.ShipmentStatus.COMPLETED);
+        ShipmentStatusRequest request = new ShipmentStatusRequest(ShipmentStatus.COMPLETED);
         shipmentService.updateShipmentStatus(existingShipment.getId(), request);
 
         // then
         Shipment updatedShipment = (shipmentRepository.findById(existingShipment.getId())).get();
-        assertThat(updatedShipment.getStatus()).isEqualTo(Shipment.ShipmentStatus.COMPLETED);
+        assertThat(updatedShipment.getStatus()).isEqualTo(ShipmentStatus.COMPLETED);
     }
 
 
@@ -177,6 +187,8 @@ public class ShipmentServiceIntegrationTest {
     @Test
     @Transactional
     public void testMarkShipmentCancelledByOrderId() {
+        stateMachine.start();
+
         // given
         Shipment existingShipment = createDummyShipment();
 
@@ -185,7 +197,7 @@ public class ShipmentServiceIntegrationTest {
 
         // then
         Shipment updatedShipment = (shipmentRepository.findById(existingShipment.getId())).get();
-        assertThat(updatedShipment.getStatus()).isEqualTo(Shipment.ShipmentStatus.CANCELLED);
+        assertThat(updatedShipment.getStatus()).isEqualTo(ShipmentStatus.CANCELLED);
     }
 
     private Shipment createDummyShipment() {
@@ -194,7 +206,7 @@ public class ShipmentServiceIntegrationTest {
                 .address("123 Main St")
                 .customerEmail("random@gmail.com")
                 .trackingCode("ABC123XYZ786")
-                .status(Shipment.ShipmentStatus.NEW)
+                .status(ShipmentStatus.NEW)
                 .build();
         shipmentRepository.save(existingShipment);
 

@@ -10,10 +10,12 @@ import com.tanservices.shipment.openfeign.OrderClient;
 import com.tanservices.shipment.openfeign.OrderStatus;
 import com.tanservices.shipment.openfeign.OrderStatusRequest;
 import feign.FeignException;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.statemachine.StateMachine;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
@@ -30,6 +32,9 @@ public class ShipmentService {
 
     private final KafkaTemplate<String, NotificationDto> kafkaTemplate;
 
+    @Autowired
+    private StateMachine<ShipmentStatus, String> stateMachine;
+
     @Value("${spring.kafka.notification-topic}")
     private String noticationTopic;
 
@@ -38,6 +43,21 @@ public class ShipmentService {
         this.shipmentRepository = shipmentRepository;
         this.orderClient = orderClient;
         this.kafkaTemplate = kafkaTemplate;
+    }
+
+    @PostConstruct
+    public void init() {
+        stateMachine.start();
+    }
+
+    public void processShipmentState(Shipment shipment, String event) {
+        stateMachine.sendEvent(event);
+        ShipmentStatus currentState = stateMachine.getState().getId();
+
+        // Update shipment status based on current state of state machine
+        shipment.setStatus(currentState);
+
+        log.info("Current state for shipment id " + shipment.getId() + " is " + currentState);
     }
 
     public List<Shipment> getAllShipments() {
@@ -70,7 +90,7 @@ public class ShipmentService {
                 .address(shipmentRequest.address())
                 .customerEmail(order.get().customerEmail())
                 .trackingCode(shipmentRequest.trackingCode())
-                .status(Shipment.ShipmentStatus.NEW)
+                .status(ShipmentStatus.NEW)
                 .build();
 
         //update order status
@@ -144,7 +164,8 @@ public class ShipmentService {
         Shipment existingShipment = shipmentRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new ShipmentNotFoundException("There is no shipment with orderId: " + orderId));
 
-        existingShipment.setStatus(Shipment.ShipmentStatus.CANCELLED);
+
+        processShipmentState(existingShipment,"cancel");
         shipmentRepository.save(existingShipment);
 
         //send notification
@@ -154,18 +175,29 @@ public class ShipmentService {
 
     public void updateShipmentStatus(Long id, ShipmentStatusRequest shipmentStatusRequest) {
         // Do not allow shipment status to updated as Cancelled by customer
-        if (shipmentStatusRequest.status() == Shipment.ShipmentStatus.CANCELLED) {
+        if (shipmentStatusRequest.status() == ShipmentStatus.CANCELLED) {
             throw new InvalidStatusUpdateException("You cannot update shipment status to be CANCELLED directly." +
-                                                    "The order needs to be CANCELLED.");
+                    "The order needs to be CANCELLED.");
         }
 
         Shipment existingShipment = shipmentRepository.findById(id)
                 .orElseThrow(() -> new ShipmentNotFoundException(id));
 
-        existingShipment.setStatus(shipmentStatusRequest.status());
+        // Send event to state machine based on requested status update
+        switch (shipmentStatusRequest.status()) {
+            case COMPLETED:
+                processShipmentState(existingShipment,"complete");
+                break;
+            case LOST:
+                processShipmentState(existingShipment,"lose");
+                break;
+            case CANCELLED:
+                processShipmentState(existingShipment,"cancel");
+                break;
+        }
 
         //if shipment completed, mark order completed
-        if(existingShipment.getStatus() == Shipment.ShipmentStatus.COMPLETED) {
+        if(existingShipment.getStatus() == ShipmentStatus.COMPLETED) {
             orderClient.markOrderCompleted(existingShipment.getOrderId());
         }
 
