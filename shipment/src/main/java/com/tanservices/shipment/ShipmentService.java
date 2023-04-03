@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.statemachine.StateMachine;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
@@ -32,32 +31,17 @@ public class ShipmentService {
 
     private final KafkaTemplate<String, NotificationDto> kafkaTemplate;
 
-    @Autowired
-    private StateMachine<ShipmentStatus, String> stateMachine;
+    private final ShipmentStateMachineService shipmentStateMachineService;
 
     @Value("${spring.kafka.notification-topic}")
     private String noticationTopic;
 
     @Autowired
-    public ShipmentService(ShipmentRepository shipmentRepository, OrderClient orderClient, KafkaTemplate<String, NotificationDto> kafkaTemplate) {
+    public ShipmentService(ShipmentRepository shipmentRepository, OrderClient orderClient, KafkaTemplate<String, NotificationDto> kafkaTemplate, ShipmentStateMachineService shipmentStateMachineService) {
         this.shipmentRepository = shipmentRepository;
         this.orderClient = orderClient;
         this.kafkaTemplate = kafkaTemplate;
-    }
-
-    @PostConstruct
-    public void init() {
-        stateMachine.start();
-    }
-
-    public void processShipmentState(Shipment shipment, String event) {
-        stateMachine.sendEvent(event);
-        ShipmentStatus currentState = stateMachine.getState().getId();
-
-        // Update shipment status based on current state of state machine
-        shipment.setStatus(currentState);
-
-        log.info("Current state for shipment id " + shipment.getId() + " is " + currentState);
+        this.shipmentStateMachineService = shipmentStateMachineService;
     }
 
     public List<Shipment> getAllShipments() {
@@ -165,7 +149,7 @@ public class ShipmentService {
                 .orElseThrow(() -> new ShipmentNotFoundException("There is no shipment with orderId: " + orderId));
 
 
-        processShipmentState(existingShipment,"cancel");
+        shipmentStateMachineService.processShipmentState(existingShipment, ShipmentStateMachine.ShipmentEvent.CANCEL);
         shipmentRepository.save(existingShipment);
 
         //send notification
@@ -186,13 +170,13 @@ public class ShipmentService {
         // Send event to state machine based on requested status update
         switch (shipmentStatusRequest.status()) {
             case COMPLETED:
-                processShipmentState(existingShipment,"complete");
+                shipmentStateMachineService.processShipmentState(existingShipment, ShipmentStateMachine.ShipmentEvent.COMPLETE);
                 break;
             case LOST:
-                processShipmentState(existingShipment,"lose");
+                shipmentStateMachineService.processShipmentState(existingShipment, ShipmentStateMachine.ShipmentEvent.LOSE);
                 break;
             case CANCELLED:
-                processShipmentState(existingShipment,"cancel");
+                shipmentStateMachineService.processShipmentState(existingShipment, ShipmentStateMachine.ShipmentEvent.CANCEL);
                 break;
         }
 

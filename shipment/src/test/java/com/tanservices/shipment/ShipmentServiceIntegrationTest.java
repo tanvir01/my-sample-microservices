@@ -8,15 +8,12 @@ import com.tanservices.shipment.openfeign.OrderClient;
 import com.tanservices.shipment.openfeign.OrderStatus;
 import com.tanservices.shipment.openfeign.OrderStatusRequest;
 import jakarta.transaction.Transactional;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.statemachine.StateMachine;
 import org.springframework.test.context.ActiveProfiles;
 import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,7 +33,7 @@ public class ShipmentServiceIntegrationTest {
     private ShipmentRepository shipmentRepository;
 
     @Autowired
-    private StateMachine<ShipmentStatus, String> stateMachine;
+    private ShipmentStateMachineService shipmentStateMachineService;
 
     @MockBean
     private OrderClient orderClient;
@@ -45,8 +42,9 @@ public class ShipmentServiceIntegrationTest {
     private KafkaTemplate<String, NotificationDto> kafkaTemplate;
 
     @BeforeEach
-    public void beforeEach() {
-        stateMachine.start();
+    public void setUp() {
+        shipmentStateMachineService.getStateMachine().stop();
+        shipmentStateMachineService.getStateMachine().start();
     }
 
     @Test
