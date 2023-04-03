@@ -9,6 +9,8 @@ import com.tanservices.shipment.openfeign.OrderStatus;
 import com.tanservices.shipment.openfeign.OrderStatusRequest;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -42,9 +44,9 @@ public class ShipmentServiceIntegrationTest {
     @MockBean
     private KafkaTemplate<String, NotificationDto> kafkaTemplate;
 
-    @AfterEach
-    public void afterEach() {
-        shipmentRepository.deleteAll();
+    @BeforeEach
+    public void beforeEach() {
+        stateMachine.start();
     }
 
     @Test
@@ -187,8 +189,6 @@ public class ShipmentServiceIntegrationTest {
     @Test
     @Transactional
     public void testMarkShipmentCancelledByOrderId() {
-        stateMachine.start();
-
         // given
         Shipment existingShipment = createDummyShipment();
 
