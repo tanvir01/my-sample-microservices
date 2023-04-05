@@ -31,6 +31,9 @@ public class ShipmentServiceIntegrationTest {
     @Autowired
     private ShipmentRepository shipmentRepository;
 
+    @Autowired
+    private ShipmentStateMachineService shipmentStateMachineService;
+
     @MockBean
     private OrderClient orderClient;
 
@@ -86,7 +89,7 @@ public class ShipmentServiceIntegrationTest {
         assertThat(shipment.getOrderId()).isEqualTo(orderId);
         assertThat(shipment.getTrackingCode()).isEqualTo(trackingCode);
         assertThat(shipment.getAddress()).isEqualTo(address);
-        assertThat(shipment.getStatus()).isEqualTo(Shipment.ShipmentStatus.NEW);
+        assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.NEW);
 
         OrderStatusRequest orderStatusRequest = new OrderStatusRequest(OrderStatus.PROCESSING);
         verify(orderClient).updateOrderStatus(orderId, orderStatusRequest);
@@ -151,12 +154,12 @@ public class ShipmentServiceIntegrationTest {
         Shipment existingShipment = createDummyShipment();
 
         // when
-        ShipmentStatusRequest request = new ShipmentStatusRequest(Shipment.ShipmentStatus.COMPLETED);
+        ShipmentStatusRequest request = new ShipmentStatusRequest(ShipmentStatus.COMPLETED);
         shipmentService.updateShipmentStatus(existingShipment.getId(), request);
 
         // then
         Shipment updatedShipment = (shipmentRepository.findById(existingShipment.getId())).get();
-        assertThat(updatedShipment.getStatus()).isEqualTo(Shipment.ShipmentStatus.COMPLETED);
+        assertThat(updatedShipment.getStatus()).isEqualTo(ShipmentStatus.COMPLETED);
     }
 
 
@@ -185,7 +188,7 @@ public class ShipmentServiceIntegrationTest {
 
         // then
         Shipment updatedShipment = (shipmentRepository.findById(existingShipment.getId())).get();
-        assertThat(updatedShipment.getStatus()).isEqualTo(Shipment.ShipmentStatus.CANCELLED);
+        assertThat(updatedShipment.getStatus()).isEqualTo(ShipmentStatus.CANCELLED);
     }
 
     private Shipment createDummyShipment() {
@@ -194,7 +197,7 @@ public class ShipmentServiceIntegrationTest {
                 .address("123 Main St")
                 .customerEmail("random@gmail.com")
                 .trackingCode("ABC123XYZ786")
-                .status(Shipment.ShipmentStatus.NEW)
+                .status(ShipmentStatus.NEW)
                 .build();
         shipmentRepository.save(existingShipment);
 

@@ -1,6 +1,5 @@
 package com.tanservices.order;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -10,8 +9,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.ColumnDefault;
 import org.jetbrains.annotations.NotNull;
-
-import static com.tanservices.order.Order.OrderStatus.PENDING;
 
 
 @Entity
@@ -50,13 +47,6 @@ public class Order {
     @Enumerated(EnumType.STRING)
     @JsonProperty("status")
     private OrderStatus status;
-
-    public enum OrderStatus {
-        PENDING,
-        PROCESSING,
-        COMPLETED,
-        CANCELLED
-    }
 
 }
 
