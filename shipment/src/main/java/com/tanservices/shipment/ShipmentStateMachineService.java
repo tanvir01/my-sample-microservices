@@ -1,6 +1,7 @@
 package com.tanservices.shipment;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.statemachine.support.DefaultStateMachineContext;
 import org.springframework.stereotype.Service;
 import org.springframework.statemachine.StateMachine;
 
@@ -20,6 +21,9 @@ public class ShipmentStateMachineService {
     }
 
     public void processShipmentState(Shipment shipment, ShipmentStateMachine.ShipmentEvent shipmentEvent) {
+        // Reset the state machine to the current state of the shipment
+        resetStateMachine(shipment.getStatus());
+
         stateMachine.sendEvent(shipmentEvent);
         ShipmentStatus currentState = stateMachine.getState().getId();
 
@@ -27,5 +31,11 @@ public class ShipmentStateMachineService {
         shipment.setStatus(currentState);
 
         log.info("Current state for shipment id " + shipment.getId() + " is " + currentState);
+    }
+
+    private void resetStateMachine(ShipmentStatus shipmentStatus) {
+        this.stateMachine.stop();
+        this.stateMachine.getStateMachineAccessor().doWithAllRegions(accessor -> accessor.resetStateMachine(new DefaultStateMachineContext<>(shipmentStatus, null, null, null)));
+        this.stateMachine.start();
     }
 }

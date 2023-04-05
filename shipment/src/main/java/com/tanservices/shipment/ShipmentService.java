@@ -171,18 +171,11 @@ public class ShipmentService {
         switch (shipmentStatusRequest.status()) {
             case COMPLETED:
                 shipmentStateMachineService.processShipmentState(existingShipment, ShipmentStateMachine.ShipmentEvent.COMPLETE);
+                orderClient.markOrderCompleted(existingShipment.getOrderId());
                 break;
             case LOST:
                 shipmentStateMachineService.processShipmentState(existingShipment, ShipmentStateMachine.ShipmentEvent.LOSE);
                 break;
-            case CANCELLED:
-                shipmentStateMachineService.processShipmentState(existingShipment, ShipmentStateMachine.ShipmentEvent.CANCEL);
-                break;
-        }
-
-        //if shipment completed, mark order completed
-        if(existingShipment.getStatus() == ShipmentStatus.COMPLETED) {
-            orderClient.markOrderCompleted(existingShipment.getOrderId());
         }
 
         shipmentRepository.save(existingShipment);
