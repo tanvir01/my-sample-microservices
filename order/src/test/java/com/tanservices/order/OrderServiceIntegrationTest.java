@@ -23,6 +23,9 @@ public class OrderServiceIntegrationTest {
     @Autowired
     private OrderRepository orderRepository;
 
+    @Autowired
+    private OrderStateMachineService orderStateMachineService;
+
     @Test
     @Transactional
     public void testGetAllOrders() {
@@ -33,7 +36,7 @@ public class OrderServiceIntegrationTest {
         order2.setCustomerName("Jane Doe");
         order2.setCustomerEmail("jane.doe@example.com");
         order2.setTotalAmount(223.10);
-        order2.setStatus(Order.OrderStatus.PENDING);
+        order2.setStatus(OrderStatus.PENDING);
         orderRepository.save(order2);
 
         // when
@@ -105,14 +108,14 @@ public class OrderServiceIntegrationTest {
         // given
         Order order = createDummyOrder();
 
-        OrderStatusRequest orderStatusRequest = new OrderStatusRequest(Order.OrderStatus.PROCESSING);
+        OrderStatusRequest orderStatusRequest = new OrderStatusRequest(OrderStatus.PROCESSING);
 
         // when
         orderService.updateOrderStatus(order.getId(), orderStatusRequest);
 
         // then
         order = orderRepository.findById(order.getId()).get();
-        assertThat(order.getStatus()).isEqualTo(Order.OrderStatus.PROCESSING);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PROCESSING);
     }
 
     @Test
@@ -136,6 +139,11 @@ public class OrderServiceIntegrationTest {
     public void markOrderCompletedTest() {
         // given
         Order existingOrder = createDummyOrder();
+        orderStateMachineService.processOrderState(existingOrder, OrderStateMachine.OrderEvent.PROCESS);
+        orderRepository.save(existingOrder);
+        existingOrder = orderRepository.findById(existingOrder.getId()).get();
+
+        assertEquals(OrderStatus.PROCESSING, existingOrder.getStatus());
 
         // when
         orderService.markOrderCompleted(existingOrder.getId());
@@ -144,7 +152,7 @@ public class OrderServiceIntegrationTest {
         Order updatedOrder = orderRepository.findById(existingOrder.getId()).get();
 
         //then
-        assertEquals(Order.OrderStatus.COMPLETED, updatedOrder.getStatus());
+        assertEquals(OrderStatus.COMPLETED, updatedOrder.getStatus());
     }
 
     private Order createDummyOrder() {
@@ -152,7 +160,7 @@ public class OrderServiceIntegrationTest {
         existingOrder.setCustomerName("John Doe");
         existingOrder.setCustomerEmail("john.doe@example.com");
         existingOrder.setTotalAmount(100.00);
-        existingOrder.setStatus(Order.OrderStatus.PENDING);
+        existingOrder.setStatus(OrderStatus.PENDING);
         existingOrder = orderRepository.save(existingOrder);
 
         return existingOrder;

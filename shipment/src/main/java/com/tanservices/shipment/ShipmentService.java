@@ -10,6 +10,7 @@ import com.tanservices.shipment.openfeign.OrderClient;
 import com.tanservices.shipment.openfeign.OrderStatus;
 import com.tanservices.shipment.openfeign.OrderStatusRequest;
 import feign.FeignException;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,14 +31,17 @@ public class ShipmentService {
 
     private final KafkaTemplate<String, NotificationDto> kafkaTemplate;
 
+    private final ShipmentStateMachineService shipmentStateMachineService;
+
     @Value("${spring.kafka.notification-topic}")
     private String noticationTopic;
 
     @Autowired
-    public ShipmentService(ShipmentRepository shipmentRepository, OrderClient orderClient, KafkaTemplate<String, NotificationDto> kafkaTemplate) {
+    public ShipmentService(ShipmentRepository shipmentRepository, OrderClient orderClient, KafkaTemplate<String, NotificationDto> kafkaTemplate, ShipmentStateMachineService shipmentStateMachineService) {
         this.shipmentRepository = shipmentRepository;
         this.orderClient = orderClient;
         this.kafkaTemplate = kafkaTemplate;
+        this.shipmentStateMachineService = shipmentStateMachineService;
     }
 
     public List<Shipment> getAllShipments() {
@@ -70,7 +74,7 @@ public class ShipmentService {
                 .address(shipmentRequest.address())
                 .customerEmail(order.get().customerEmail())
                 .trackingCode(shipmentRequest.trackingCode())
-                .status(Shipment.ShipmentStatus.NEW)
+                .status(ShipmentStatus.NEW)
                 .build();
 
         //update order status
@@ -144,7 +148,8 @@ public class ShipmentService {
         Shipment existingShipment = shipmentRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new ShipmentNotFoundException("There is no shipment with orderId: " + orderId));
 
-        existingShipment.setStatus(Shipment.ShipmentStatus.CANCELLED);
+
+        shipmentStateMachineService.processShipmentState(existingShipment, ShipmentStateMachine.ShipmentEvent.CANCEL);
         shipmentRepository.save(existingShipment);
 
         //send notification
@@ -154,19 +159,23 @@ public class ShipmentService {
 
     public void updateShipmentStatus(Long id, ShipmentStatusRequest shipmentStatusRequest) {
         // Do not allow shipment status to updated as Cancelled by customer
-        if (shipmentStatusRequest.status() == Shipment.ShipmentStatus.CANCELLED) {
+        if (shipmentStatusRequest.status() == ShipmentStatus.CANCELLED) {
             throw new InvalidStatusUpdateException("You cannot update shipment status to be CANCELLED directly." +
-                                                    "The order needs to be CANCELLED.");
+                    "The order needs to be CANCELLED.");
         }
 
         Shipment existingShipment = shipmentRepository.findById(id)
                 .orElseThrow(() -> new ShipmentNotFoundException(id));
 
-        existingShipment.setStatus(shipmentStatusRequest.status());
-
-        //if shipment completed, mark order completed
-        if(existingShipment.getStatus() == Shipment.ShipmentStatus.COMPLETED) {
-            orderClient.markOrderCompleted(existingShipment.getOrderId());
+        // Send event to state machine based on requested status update
+        switch (shipmentStatusRequest.status()) {
+            case COMPLETED:
+                shipmentStateMachineService.processShipmentState(existingShipment, ShipmentStateMachine.ShipmentEvent.COMPLETE);
+                orderClient.markOrderCompleted(existingShipment.getOrderId());
+                break;
+            case LOST:
+                shipmentStateMachineService.processShipmentState(existingShipment, ShipmentStateMachine.ShipmentEvent.LOSE);
+                break;
         }
 
         shipmentRepository.save(existingShipment);

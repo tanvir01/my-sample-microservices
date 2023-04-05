@@ -19,10 +19,13 @@ public class OrderService {
 
     private final ShipmentClient shipmentClient;
 
+    private final OrderStateMachineService orderStateMachineService;
+
     @Autowired
-    public OrderService(OrderRepository orderRepository, ShipmentClient shipmentClient) {
+    public OrderService(OrderRepository orderRepository, ShipmentClient shipmentClient, OrderStateMachineService orderStateMachineService) {
         this.orderRepository = orderRepository;
         this.shipmentClient = shipmentClient;
+        this.orderStateMachineService = orderStateMachineService;
     }
 
     public List<Order> getAllOrders() {
@@ -39,7 +42,7 @@ public class OrderService {
                 .customerName(orderRequest.customerName())
                 .customerEmail(orderRequest.customerEmail())
                 .totalAmount(orderRequest.totalAmount())
-                .status(Order.OrderStatus.PENDING)
+                .status(OrderStatus.PENDING)
                 .build();
 
         return orderRepository.save(order);
@@ -65,7 +68,7 @@ public class OrderService {
 
     public void updateOrderStatus(Long id, OrderStatusRequest orderStatusRequest) {
         // Do not allow order status to updated as COMPLETED by customer
-        if (orderStatusRequest.status() == Order.OrderStatus.COMPLETED) {
+        if (orderStatusRequest.status() == OrderStatus.COMPLETED) {
             throw new InvalidStatusUpdateException("You cannot update order status to be COMPLETED directly." +
                     "The shipment needs to be COMPLETED.");
         }
@@ -73,11 +76,19 @@ public class OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException(id));
 
-        if (orderStatusRequest.status() == Order.OrderStatus.CANCELLED) {
-            cancelShipment(id);
+        log.info("Status Requested for orderId " + order.getId() + " is " + orderStatusRequest.status());
+
+        // Send event to state machine based on requested status update
+        switch (orderStatusRequest.status()) {
+            case PROCESSING:
+                orderStateMachineService.processOrderState(order, OrderStateMachine.OrderEvent.PROCESS);
+                break;
+            case CANCELLED:
+                orderStateMachineService.processOrderState(order, OrderStateMachine.OrderEvent.CANCEL);
+                cancelShipment(id);
+                break;
         }
 
-        order.setStatus(orderStatusRequest.status());
         orderRepository.save(order);
     }
 
@@ -97,7 +108,7 @@ public class OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException(id));
 
-        order.setStatus(Order.OrderStatus.COMPLETED);
+        orderStateMachineService.processOrderState(order, OrderStateMachine.OrderEvent.COMPLETE);
         orderRepository.save(order);
     }
 }

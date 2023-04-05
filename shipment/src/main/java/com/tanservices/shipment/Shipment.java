@@ -53,11 +53,4 @@ public class Shipment {
     @Enumerated(EnumType.STRING)
     @JsonProperty("status")
     private ShipmentStatus status;
-
-    public enum ShipmentStatus {
-        NEW,
-        COMPLETED,
-        LOST,
-        CANCELLED
-    }
 }
