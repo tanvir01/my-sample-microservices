@@ -67,7 +67,6 @@ public class JwtService {
                 .compact();
     }
 
-
     public Claims getUserInfoFromToken(String token) {
         return Jwts.parser().setSigningKey(signingKey).parseClaimsJws(token).getBody();
     }
