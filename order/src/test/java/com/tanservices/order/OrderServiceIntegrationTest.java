@@ -1,10 +1,15 @@
 package com.tanservices.order;
 
 import com.tanservices.order.exception.OrderNotFoundException;
+import com.tanservices.order.security.FetchCustomerInfo;
+import com.tanservices.order.security.JwtService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.impl.DefaultClaims;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +30,12 @@ public class OrderServiceIntegrationTest {
 
     @Autowired
     private OrderStateMachineService orderStateMachineService;
+
+    @Autowired
+    private FetchCustomerInfo fetchCustomerInfo;
+
+    @MockBean
+    private JwtService jwtService;
 
     @Test
     @Transactional
@@ -75,7 +86,12 @@ public class OrderServiceIntegrationTest {
     @Transactional
     public void testCreateOrder() {
         // given
-        OrderRequest orderRequest = new OrderRequest("John Doe", "john.doe@example.com", 100.00);
+        Claims claims = new DefaultClaims();
+        claims.put("name", "John Doe");
+        claims.put("email", "john.doe@example.com");
+        fetchCustomerInfo.setClaims(claims);
+
+        OrderRequest orderRequest = new OrderRequest(100.00);
 
         // when
         Order createdOrder = orderService.createOrder(orderRequest);
@@ -91,14 +107,12 @@ public class OrderServiceIntegrationTest {
         Order existingOrder = createDummyOrder();
 
         Long id = existingOrder.getId();
-        OrderRequest orderRequest = new OrderRequest("Jane Doe", "jane.doe@example.com", 200.00);
+        OrderRequest orderRequest = new OrderRequest(200.00);
 
         // when
         Order updatedOrder = orderService.updateOrder(id, orderRequest);
 
         // then
-        assertThat(updatedOrder.getCustomerName()).isEqualTo(orderRequest.customerName());
-        assertThat(updatedOrder.getCustomerEmail()).isEqualTo(orderRequest.customerEmail());
         assertThat(updatedOrder.getTotalAmount()).isEqualTo(orderRequest.totalAmount());
     }
 
