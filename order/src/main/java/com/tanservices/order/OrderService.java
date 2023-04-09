@@ -3,6 +3,7 @@ package com.tanservices.order;
 import com.tanservices.order.exception.InvalidStatusUpdateException;
 import com.tanservices.order.exception.OrderNotFoundException;
 import com.tanservices.order.openfeign.ShipmentClient;
+import com.tanservices.order.security.FetchCustomerInfo;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,11 +22,14 @@ public class OrderService {
 
     private final OrderStateMachineService orderStateMachineService;
 
+    private final FetchCustomerInfo fetchCustomerInfo;
+
     @Autowired
-    public OrderService(OrderRepository orderRepository, ShipmentClient shipmentClient, OrderStateMachineService orderStateMachineService) {
+    public OrderService(OrderRepository orderRepository, ShipmentClient shipmentClient, OrderStateMachineService orderStateMachineService, FetchCustomerInfo fetchCustomerInfo) {
         this.orderRepository = orderRepository;
         this.shipmentClient = shipmentClient;
         this.orderStateMachineService = orderStateMachineService;
+        this.fetchCustomerInfo = fetchCustomerInfo;
     }
 
     public List<Order> getAllOrders() {
@@ -39,8 +43,8 @@ public class OrderService {
 
     public Order createOrder(OrderRequest orderRequest) {
         Order order = Order.builder()
-                .customerName(orderRequest.customerName())
-                .customerEmail(orderRequest.customerEmail())
+                .customerName(fetchCustomerInfo.getCustomerName())
+                .customerEmail(fetchCustomerInfo.getCustomerEmail())
                 .totalAmount(orderRequest.totalAmount())
                 .status(OrderStatus.PENDING)
                 .build();
@@ -54,8 +58,6 @@ public class OrderService {
                 .orElseThrow(() -> new OrderNotFoundException(id));
 
         // Update the order
-        existingOrder.setCustomerName(orderRequest.customerName());
-        existingOrder.setCustomerEmail(orderRequest.customerEmail());
         existingOrder.setTotalAmount(orderRequest.totalAmount());
         orderRepository.save(existingOrder);
 
