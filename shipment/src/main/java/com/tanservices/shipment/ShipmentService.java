@@ -1,16 +1,13 @@
 package com.tanservices.shipment;
 
-import com.tanservices.shipment.exception.DuplicateShipmentException;
-import com.tanservices.shipment.exception.InvalidStatusUpdateException;
-import com.tanservices.shipment.exception.OrderNotFoundException;
-import com.tanservices.shipment.exception.ShipmentNotFoundException;
+import com.tanservices.shipment.exception.*;
 import com.tanservices.shipment.kafka.NotificationDto;
 import com.tanservices.shipment.openfeign.Order;
 import com.tanservices.shipment.openfeign.OrderClient;
 import com.tanservices.shipment.openfeign.OrderStatus;
 import com.tanservices.shipment.openfeign.OrderStatusRequest;
+import com.tanservices.shipment.security.FetchCustomerInfo;
 import feign.FeignException;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,15 +30,18 @@ public class ShipmentService {
 
     private final ShipmentStateMachineService shipmentStateMachineService;
 
+    private final FetchCustomerInfo fetchCustomerInfo;
+
     @Value("${spring.kafka.notification-topic}")
     private String noticationTopic;
 
     @Autowired
-    public ShipmentService(ShipmentRepository shipmentRepository, OrderClient orderClient, KafkaTemplate<String, NotificationDto> kafkaTemplate, ShipmentStateMachineService shipmentStateMachineService) {
+    public ShipmentService(ShipmentRepository shipmentRepository, OrderClient orderClient, KafkaTemplate<String, NotificationDto> kafkaTemplate, ShipmentStateMachineService shipmentStateMachineService, FetchCustomerInfo fetchCustomerInfo) {
         this.shipmentRepository = shipmentRepository;
         this.orderClient = orderClient;
         this.kafkaTemplate = kafkaTemplate;
         this.shipmentStateMachineService = shipmentStateMachineService;
+        this.fetchCustomerInfo = fetchCustomerInfo;
     }
 
     public List<Shipment> getAllShipments() {
@@ -68,11 +68,18 @@ public class ShipmentService {
             throw new OrderNotFoundException(shipmentRequest.orderId());
         }
 
+
+        // check if order customer is different to this customer
+        String customerEmail = fetchCustomerInfo.getCustomerEmail();
+        if(!((order.get().customerEmail()).equals(customerEmail))) {
+            throw new InvalidCustomerException("You can only create shipment for your own order");
+        }
+
         // build shipment
         Shipment shipment = Shipment.builder()
                 .orderId(order.get().id())
-                .address(shipmentRequest.address())
-                .customerEmail(order.get().customerEmail())
+                .address(fetchCustomerInfo.getCustomerAddress())
+                .customerEmail(customerEmail)
                 .trackingCode(shipmentRequest.trackingCode())
                 .status(ShipmentStatus.NEW)
                 .build();
@@ -107,6 +114,12 @@ public class ShipmentService {
                 throw new OrderNotFoundException(shipmentRequest.orderId());
             }
 
+            // check if order customer is different to this customer
+            String customerEmail = fetchCustomerInfo.getCustomerEmail();
+            if(!((order.get().customerEmail()).equals(customerEmail))) {
+                throw new InvalidCustomerException("You can only update shipment for your own order");
+            }
+
             existingShipment.setOrderId(orderId);
         }
 
@@ -122,7 +135,7 @@ public class ShipmentService {
 
 
         // Update the shipment
-        existingShipment.setAddress(shipmentRequest.address());
+        existingShipment.setAddress(fetchCustomerInfo.getCustomerAddress());
         shipmentRepository.save(existingShipment);
 
         //send notification

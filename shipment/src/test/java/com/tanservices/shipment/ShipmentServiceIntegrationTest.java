@@ -7,6 +7,10 @@ import com.tanservices.shipment.openfeign.Order;
 import com.tanservices.shipment.openfeign.OrderClient;
 import com.tanservices.shipment.openfeign.OrderStatus;
 import com.tanservices.shipment.openfeign.OrderStatusRequest;
+import com.tanservices.shipment.security.FetchCustomerInfo;
+import com.tanservices.shipment.security.JwtService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.impl.DefaultClaims;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +43,12 @@ public class ShipmentServiceIntegrationTest {
 
     @MockBean
     private KafkaTemplate<String, NotificationDto> kafkaTemplate;
+
+    @Autowired
+    private FetchCustomerInfo fetchCustomerInfo;
+
+    @MockBean
+    private JwtService jwtService;
 
     @Test
     public void testGetAllShipments() {
@@ -75,24 +85,46 @@ public class ShipmentServiceIntegrationTest {
     public void testCreateShipment() {
         // given
         Long orderId = 1L;
-        String address = "123 Main St";
         String trackingCode = "123456sample101";
+//        String customerAddress = "123 Main St";
+//
+//        String customerName = "John Doe";
+//        String customerEmail = "john.doe@example.com";
+//
+//        setDummyClaims(customerName, customerEmail, customerAddress);
+//
+//        Order order = new Order(orderId, customerName, customerEmail, 223.0, OrderStatus.PENDING);
+//        when(orderClient.getOrderById(orderId)).thenReturn(order);
 
-        Order order = new Order(orderId, "John Doe", "john@gmail.com", 223.0, OrderStatus.PENDING);
-        when(orderClient.getOrderById(orderId)).thenReturn(order);
+        setDummyClaimsAndOrder(orderId);
 
         // when
-        ShipmentRequest request = new ShipmentRequest(orderId, address, trackingCode);
+        ShipmentRequest request = new ShipmentRequest(orderId, trackingCode);
         Shipment shipment = shipmentService.createShipment(request);
 
         // then
         assertThat(shipment.getOrderId()).isEqualTo(orderId);
         assertThat(shipment.getTrackingCode()).isEqualTo(trackingCode);
-        assertThat(shipment.getAddress()).isEqualTo(address);
+        assertThat(shipment.getAddress()).isEqualTo(fetchCustomerInfo.getCustomerAddress());
         assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.NEW);
 
         OrderStatusRequest orderStatusRequest = new OrderStatusRequest(OrderStatus.PROCESSING);
         verify(orderClient).updateOrderStatus(orderId, orderStatusRequest);
+    }
+
+    private void setDummyClaimsAndOrder(Long orderId) {
+        String customerAddress = "123 Main St";
+        String customerName = "John Doe";
+        String customerEmail = "john.doe@example.com";
+
+        Order order = new Order(orderId, customerName, customerEmail, 223.0, OrderStatus.PENDING);
+        when(orderClient.getOrderById(orderId)).thenReturn(order);
+
+        Claims claims = new DefaultClaims();
+        claims.put("name", customerName);
+        claims.put("email", customerEmail);
+        claims.put("address", customerAddress);
+        fetchCustomerInfo.setClaims(claims);
     }
 
     @Test
@@ -101,7 +133,7 @@ public class ShipmentServiceIntegrationTest {
         // given
         Shipment existingShipment = createDummyShipment();
 
-        ShipmentRequest shipmentRequest = new ShipmentRequest(existingShipment.getOrderId(), "456 Elm St", "DEF456");
+        ShipmentRequest shipmentRequest = new ShipmentRequest(existingShipment.getOrderId(), "DEF456");
 
         // when/then
         assertThatThrownBy(() -> shipmentService.createShipment(shipmentRequest))
@@ -115,7 +147,7 @@ public class ShipmentServiceIntegrationTest {
         // given
         Shipment existingShipment = createDummyShipment();
 
-        ShipmentRequest shipmentRequest = new ShipmentRequest(2L, "456 Elm St", existingShipment.getTrackingCode());
+        ShipmentRequest shipmentRequest = new ShipmentRequest(2L, existingShipment.getTrackingCode());
 
         // when/then
         assertThatThrownBy(() -> shipmentService.createShipment(shipmentRequest))
@@ -134,7 +166,7 @@ public class ShipmentServiceIntegrationTest {
         when(orderClient.getOrderById(orderId)).thenReturn(order);
 
         Long id = existingShipment.getId();
-        ShipmentRequest shipmentRequest = new ShipmentRequest(orderId, "456 Elm St", "DEF456XYZ786");
+        ShipmentRequest shipmentRequest = new ShipmentRequest(orderId, "DEF456XYZ786");
 
         // when
         Shipment updatedShipment = shipmentService.updateShipment(id, shipmentRequest);
@@ -143,7 +175,6 @@ public class ShipmentServiceIntegrationTest {
         assertThat(updatedShipment).isNotNull();
         assertThat(updatedShipment.getId()).isEqualTo(id);
         assertThat(updatedShipment.getOrderId()).isEqualTo(shipmentRequest.orderId());
-        assertThat(updatedShipment.getAddress()).isEqualTo(shipmentRequest.address());
         assertThat(updatedShipment.getTrackingCode()).isEqualTo(shipmentRequest.trackingCode());
     }
 
