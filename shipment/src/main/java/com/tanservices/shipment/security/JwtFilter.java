@@ -13,11 +13,9 @@ import java.io.IOException;
 @Component
 public class JwtFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
-    private final FetchCustomerInfo fetchCustomerInfo;
 
-    public JwtFilter(JwtService jwtService, FetchCustomerInfo fetchCustomerInfo) {
+    public JwtFilter(JwtService jwtService) {
         this.jwtService = jwtService;
-        this.fetchCustomerInfo = fetchCustomerInfo;
     }
 
     @Override
@@ -28,8 +26,8 @@ public class JwtFilter extends OncePerRequestFilter {
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             String token = authorizationHeader.substring(7);
             if (jwtService.validateToken(token)) {
-                fetchCustomerInfo.setClaims(jwtService.getAllClaims(token));
                 filterChain.doFilter(request, response);
+                JwtContextHolder.clear();
                 return;
             }
         }

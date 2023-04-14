@@ -20,7 +20,6 @@ public class JwtService {
 
     @Value("${jwt.secret}")
     private String jwtSecret;
-
     private Key signingKey;
 
     @PostConstruct
@@ -49,6 +48,7 @@ public class JwtService {
                 log.info("JWT Token Expired");
                 return false;
             }
+            JwtContextHolder.setJwtToken(this, token);
 
             return true;
         } catch (Exception ex) {

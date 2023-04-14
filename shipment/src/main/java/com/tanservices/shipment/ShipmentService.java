@@ -6,7 +6,8 @@ import com.tanservices.shipment.openfeign.Order;
 import com.tanservices.shipment.openfeign.OrderClient;
 import com.tanservices.shipment.openfeign.OrderStatus;
 import com.tanservices.shipment.openfeign.OrderStatusRequest;
-import com.tanservices.shipment.security.FetchCustomerInfo;
+import com.tanservices.shipment.security.JwtContextHolder;
+import com.tanservices.shipment.security.JwtService;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -30,26 +32,26 @@ public class ShipmentService {
 
     private final ShipmentStateMachineService shipmentStateMachineService;
 
-    private final FetchCustomerInfo fetchCustomerInfo;
+    private final JwtService jwtService;
 
     @Value("${spring.kafka.notification-topic}")
     private String noticationTopic;
 
     @Autowired
-    public ShipmentService(ShipmentRepository shipmentRepository, OrderClient orderClient, KafkaTemplate<String, NotificationDto> kafkaTemplate, ShipmentStateMachineService shipmentStateMachineService, FetchCustomerInfo fetchCustomerInfo) {
+    public ShipmentService(ShipmentRepository shipmentRepository, OrderClient orderClient, KafkaTemplate<String, NotificationDto> kafkaTemplate, ShipmentStateMachineService shipmentStateMachineService, JwtService jwtService) {
         this.shipmentRepository = shipmentRepository;
         this.orderClient = orderClient;
         this.kafkaTemplate = kafkaTemplate;
         this.shipmentStateMachineService = shipmentStateMachineService;
-        this.fetchCustomerInfo = fetchCustomerInfo;
+        this.jwtService = jwtService;
     }
 
     public List<Shipment> getAllShipments() {
-        return shipmentRepository.findAll();
+        return shipmentRepository.findByUserId(JwtContextHolder.getUserId());
     }
 
     public Optional<Shipment> getShipmentById(Long id) {
-        return Optional.ofNullable(shipmentRepository.findById(id)
+        return Optional.ofNullable(shipmentRepository.findByIdAndUserId(id, JwtContextHolder.getUserId())
                 .orElseThrow(() -> new ShipmentNotFoundException(id)));
     }
 
@@ -70,16 +72,15 @@ public class ShipmentService {
 
 
         // check if order customer is different to this customer
-        String customerEmail = fetchCustomerInfo.getCustomerEmail();
-        if(!((order.get().customerEmail()).equals(customerEmail))) {
-            throw new InvalidCustomerException("You can only create shipment for your own order");
+        Long userId = JwtContextHolder.getUserId();
+        if(!Objects.equals(order.get().userId(), userId)) {
+            throw new InvalidCustomerException();
         }
 
         // build shipment
         Shipment shipment = Shipment.builder()
                 .orderId(order.get().id())
-                .address(fetchCustomerInfo.getCustomerAddress())
-                .customerEmail(customerEmail)
+                .userId(userId)
                 .trackingCode(shipmentRequest.trackingCode())
                 .status(ShipmentStatus.NEW)
                 .build();
@@ -97,7 +98,7 @@ public class ShipmentService {
 
     public Shipment updateShipment(Long id, ShipmentRequest shipmentRequest) {
         // Check if the shipment exists with the given shipmentId
-        Shipment existingShipment = shipmentRepository.findById(id)
+        Shipment existingShipment = shipmentRepository.findByIdAndUserId(id, JwtContextHolder.getUserId())
                 .orElseThrow(() -> new ShipmentNotFoundException(id));
 
         // Check if the orderId has been updated in the request body
@@ -115,9 +116,8 @@ public class ShipmentService {
             }
 
             // check if order customer is different to this customer
-            String customerEmail = fetchCustomerInfo.getCustomerEmail();
-            if(!((order.get().customerEmail()).equals(customerEmail))) {
-                throw new InvalidCustomerException("You can only update shipment for your own order");
+            if(!Objects.equals(order.get().userId(), JwtContextHolder.getUserId())) {
+                throw new InvalidCustomerException();
             }
 
             existingShipment.setOrderId(orderId);
@@ -135,7 +135,6 @@ public class ShipmentService {
 
 
         // Update the shipment
-        existingShipment.setAddress(fetchCustomerInfo.getCustomerAddress());
         shipmentRepository.save(existingShipment);
 
         //send notification
@@ -147,7 +146,7 @@ public class ShipmentService {
 
     public void deleteShipment(Long id) {
         // Check if the shipment exists with the given shipmentId
-        Shipment existingShipment = shipmentRepository.findById(id)
+        Shipment existingShipment = shipmentRepository.findByIdAndUserId(id, JwtContextHolder.getUserId())
                 .orElseThrow(() -> new ShipmentNotFoundException(id));
 
         shipmentRepository.delete(existingShipment);
@@ -158,7 +157,7 @@ public class ShipmentService {
     }
 
     public void markShipmentCancelledByOrderId(Long orderId) {
-        Shipment existingShipment = shipmentRepository.findByOrderId(orderId)
+        Shipment existingShipment = shipmentRepository.findByOrderIdAndUserId(orderId, JwtContextHolder.getUserId())
                 .orElseThrow(() -> new ShipmentNotFoundException("There is no shipment with orderId: " + orderId));
 
 
@@ -177,7 +176,7 @@ public class ShipmentService {
                     "The order needs to be CANCELLED.");
         }
 
-        Shipment existingShipment = shipmentRepository.findById(id)
+        Shipment existingShipment = shipmentRepository.findByIdAndUserId(id, JwtContextHolder.getUserId())
                 .orElseThrow(() -> new ShipmentNotFoundException(id));
 
         // Send event to state machine based on requested status update
@@ -219,7 +218,7 @@ public class ShipmentService {
     private void sendNotificationToKafka(Shipment shipment, String message) {
         String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
         NotificationDto notificationDto = new NotificationDto(shipment.getOrderId(), shipment.getId(),
-                                                                shipment.getCustomerEmail(), message);
+                                                                shipment.getUserId(), message);
         log.info("Sending payload to kafka for shipment id: " + shipment.getId() + " with message: " +
                 message + " at timestamp " + timeStamp);
         kafkaTemplate.send(noticationTopic, timeStamp, notificationDto);

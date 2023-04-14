@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 
 @ResponseStatus(HttpStatus.BAD_REQUEST)
 public class InvalidCustomerException extends RuntimeException {
-    public InvalidCustomerException(String message) {
-        super(message);
+    public InvalidCustomerException() {
+        super("You can only create OR update shipment for your own order");
     }
 }
