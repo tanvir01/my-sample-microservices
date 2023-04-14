@@ -28,8 +28,8 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
         // Validate username and password
-        String username = request.getUsername();
-        String password = request.getPassword();
+        String username = request.username();
+        String password = request.password();
 
         Optional<User> user = userService.findByUsername(username);
 

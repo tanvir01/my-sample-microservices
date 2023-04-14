@@ -32,13 +32,13 @@ public class User implements UserDetails {
     @Column(name = "address")
     private String address;
 
-    @Column(name = "username")
-    private String username;
-
     @Column(name = "password")
     private String password;
 
-    // Getters and setters
+    @Override
+    public String getUsername() {
+        return email;
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
