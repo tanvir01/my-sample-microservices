@@ -28,13 +28,8 @@ public class Order {
 
     @NotNull
     @Column(nullable = false)
-    @JsonProperty("customerName")
-    private String customerName;
-
-    @NotNull
-    @Column(nullable = false)
-    @JsonProperty("customerEmail")
-    private String customerEmail;
+    @JsonProperty("userId")
+    private Long userId;
 
     @NotNull
     @Column(nullable = false)

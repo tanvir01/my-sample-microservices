@@ -1,11 +1,9 @@
 package com.tanservices.order;
 
 import com.tanservices.order.exception.OrderNotFoundException;
-import com.tanservices.order.security.FetchCustomerInfo;
 import com.tanservices.order.security.JwtService;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.impl.DefaultClaims;
 import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +15,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -31,11 +30,13 @@ public class OrderServiceIntegrationTest {
     @Autowired
     private OrderStateMachineService orderStateMachineService;
 
-    @Autowired
-    private FetchCustomerInfo fetchCustomerInfo;
-
     @MockBean
     private JwtService jwtService;
+
+    @BeforeEach
+    void setUp() {
+        when(jwtService.getUserId()).thenReturn(1L);
+    }
 
     @Test
     @Transactional
@@ -44,8 +45,7 @@ public class OrderServiceIntegrationTest {
         Order order1 = createDummyOrder();
 
         Order order2 = new Order();
-        order2.setCustomerName("Jane Doe");
-        order2.setCustomerEmail("jane.doe@example.com");
+        order2.setUserId(1L);
         order2.setTotalAmount(223.10);
         order2.setStatus(OrderStatus.PENDING);
         orderRepository.save(order2);
@@ -86,11 +86,6 @@ public class OrderServiceIntegrationTest {
     @Transactional
     public void testCreateOrder() {
         // given
-        Claims claims = new DefaultClaims();
-        claims.put("name", "John Doe");
-        claims.put("email", "john.doe@example.com");
-        fetchCustomerInfo.setClaims(claims);
-
         OrderRequest orderRequest = new OrderRequest(100.00);
 
         // when
@@ -171,8 +166,7 @@ public class OrderServiceIntegrationTest {
 
     private Order createDummyOrder() {
         Order existingOrder = new Order();
-        existingOrder.setCustomerName("John Doe");
-        existingOrder.setCustomerEmail("john.doe@example.com");
+        existingOrder.setUserId(1L);
         existingOrder.setTotalAmount(100.00);
         existingOrder.setStatus(OrderStatus.PENDING);
         existingOrder = orderRepository.save(existingOrder);

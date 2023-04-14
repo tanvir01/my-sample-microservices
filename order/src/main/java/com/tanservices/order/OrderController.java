@@ -39,7 +39,7 @@ public class OrderController {
     }
 
     @PostMapping("/{id}/mark-completed")
-    public ResponseEntity<Void> cancelShipmentByOrderId(@PathVariable Long id) {
+    public ResponseEntity<Void> markOrderCompleted(@PathVariable Long id) {
         orderService.markOrderCompleted(id);
         return new ResponseEntity<>(HttpStatus.OK);
     }
