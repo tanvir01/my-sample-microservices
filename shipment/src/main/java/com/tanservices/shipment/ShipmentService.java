@@ -215,7 +215,7 @@ public class ShipmentService {
         }
     }
 
-    private void sendNotificationToKafka(Shipment shipment, String message) {
+     void sendNotificationToKafka(Shipment shipment, String message) {
         String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
         NotificationDto notificationDto = new NotificationDto(shipment.getOrderId(), shipment.getId(),
                                                                 shipment.getUserId(), message);
