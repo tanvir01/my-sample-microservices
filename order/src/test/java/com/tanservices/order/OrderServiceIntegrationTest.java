@@ -1,7 +1,10 @@
 package com.tanservices.order;
 
 import com.tanservices.order.exception.OrderNotFoundException;
+import com.tanservices.order.security.JwtContextHolder;
 import com.tanservices.order.security.JwtService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,7 +38,11 @@ public class OrderServiceIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        when(jwtService.getUserId()).thenReturn(1L);
+        // set up mock authentication with the test user's id
+        String jwtToken = "test.jwt.token";
+        Claims claims = Jwts.claims().setSubject(String.valueOf(1L));
+        when(jwtService.getAllClaims(jwtToken)).thenReturn(claims);
+        JwtContextHolder.setJwtToken(jwtService, jwtToken);
     }
 
     @Test
