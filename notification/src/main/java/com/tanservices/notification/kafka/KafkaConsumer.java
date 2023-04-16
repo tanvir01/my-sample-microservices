@@ -28,13 +28,14 @@ public class KafkaConsumer {
 
         NotificationDto notificationDto = consumerRecord.value();
 
+        // fetch user info from auth provider ms
 
         //send notification
         String notificationMsg = "Notification for OrderId: " + notificationDto.orderId() +
                                 " ShipmentId: " + notificationDto.shipmentId() +
                                 ". Message: " + notificationDto.message() +
                                 " at " + formattedDateTime;
-        log.info("Notification: "+ notificationMsg + " Sent To: " + notificationDto.customerEmail());
-        System.out.println("Notification: "+ notificationMsg + " Sent To: " + notificationDto.customerEmail());
+        log.info("Notification: "+ notificationMsg + " Sent To: " + notificationDto.userId());
+        System.out.println("Notification: "+ notificationMsg + " Sent To: " + notificationDto.userId());
     }
 }
