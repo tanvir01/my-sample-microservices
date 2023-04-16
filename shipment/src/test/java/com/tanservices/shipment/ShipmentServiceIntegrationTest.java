@@ -7,11 +7,12 @@ import com.tanservices.shipment.openfeign.Order;
 import com.tanservices.shipment.openfeign.OrderClient;
 import com.tanservices.shipment.openfeign.OrderStatus;
 import com.tanservices.shipment.openfeign.OrderStatusRequest;
-import com.tanservices.shipment.security.FetchCustomerInfo;
+import com.tanservices.shipment.security.JwtContextHolder;
 import com.tanservices.shipment.security.JwtService;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.impl.DefaultClaims;
+import io.jsonwebtoken.Jwts;
 import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -44,11 +45,17 @@ public class ShipmentServiceIntegrationTest {
     @MockBean
     private KafkaTemplate<String, NotificationDto> kafkaTemplate;
 
-    @Autowired
-    private FetchCustomerInfo fetchCustomerInfo;
-
     @MockBean
     private JwtService jwtService;
+
+    @BeforeEach
+    void setUp() {
+        // set up mock authentication with the test user's id
+        String jwtToken = "test.jwt.token";
+        Claims claims = Jwts.claims().setSubject(String.valueOf(1L));
+        when(jwtService.getAllClaims(jwtToken)).thenReturn(claims);
+        JwtContextHolder.setJwtToken(jwtService, jwtToken);
+    }
 
     @Test
     public void testGetAllShipments() {
@@ -86,17 +93,8 @@ public class ShipmentServiceIntegrationTest {
         // given
         Long orderId = 1L;
         String trackingCode = "123456sample101";
-//        String customerAddress = "123 Main St";
-//
-//        String customerName = "John Doe";
-//        String customerEmail = "john.doe@example.com";
-//
-//        setDummyClaims(customerName, customerEmail, customerAddress);
-//
-//        Order order = new Order(orderId, customerName, customerEmail, 223.0, OrderStatus.PENDING);
-//        when(orderClient.getOrderById(orderId)).thenReturn(order);
-
-        setDummyClaimsAndOrder(orderId);
+        Order order = new Order(orderId, 1L, 223.0, OrderStatus.PENDING);
+        when(orderClient.getOrderById(orderId)).thenReturn(order);
 
         // when
         ShipmentRequest request = new ShipmentRequest(orderId, trackingCode);
@@ -105,27 +103,13 @@ public class ShipmentServiceIntegrationTest {
         // then
         assertThat(shipment.getOrderId()).isEqualTo(orderId);
         assertThat(shipment.getTrackingCode()).isEqualTo(trackingCode);
-        assertThat(shipment.getAddress()).isEqualTo(fetchCustomerInfo.getCustomerAddress());
+        assertThat(shipment.getUserId()).isEqualTo(order.userId());
         assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.NEW);
 
         OrderStatusRequest orderStatusRequest = new OrderStatusRequest(OrderStatus.PROCESSING);
         verify(orderClient).updateOrderStatus(orderId, orderStatusRequest);
     }
 
-    private void setDummyClaimsAndOrder(Long orderId) {
-        String customerAddress = "123 Main St";
-        String customerName = "John Doe";
-        String customerEmail = "john.doe@example.com";
-
-        Order order = new Order(orderId, customerName, customerEmail, 223.0, OrderStatus.PENDING);
-        when(orderClient.getOrderById(orderId)).thenReturn(order);
-
-        Claims claims = new DefaultClaims();
-        claims.put("name", customerName);
-        claims.put("email", customerEmail);
-        claims.put("address", customerAddress);
-        fetchCustomerInfo.setClaims(claims);
-    }
 
     @Test
     @Transactional
@@ -162,7 +146,7 @@ public class ShipmentServiceIntegrationTest {
         Shipment existingShipment = createDummyShipment();
 
         Long orderId = 2L;
-        Order order = new Order(orderId, "John Doe", "john@gmail.com", 223.0, OrderStatus.PENDING);
+        Order order = new Order(orderId, 1L, 223.0, OrderStatus.PENDING);
         when(orderClient.getOrderById(orderId)).thenReturn(order);
 
         Long id = existingShipment.getId();
@@ -225,8 +209,7 @@ public class ShipmentServiceIntegrationTest {
     private Shipment createDummyShipment() {
         Shipment existingShipment = Shipment.builder()
                 .orderId(1L)
-                .address("123 Main St")
-                .customerEmail("random@gmail.com")
+                .userId(1L)
                 .trackingCode("ABC123XYZ786")
                 .status(ShipmentStatus.NEW)
                 .build();
