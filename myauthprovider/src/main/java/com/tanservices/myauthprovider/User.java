@@ -1,5 +1,6 @@
 package com.tanservices.myauthprovider;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -38,6 +39,12 @@ public class User implements UserDetails {
     @Override
     public String getUsername() {
         return email;
+    }
+
+    @Override
+    @JsonIgnore
+    public String getPassword() {
+        return password;
     }
 
     @Override

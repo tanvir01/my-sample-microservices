@@ -1,6 +1,8 @@
 package com.tanservices.notification.kafka;
 
 
+import com.tanservices.notification.FetchUserInfoService;
+import com.tanservices.notification.openfeign.User;
 import com.tanservices.shipment.kafka.NotificationDto;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -14,6 +16,12 @@ import java.time.format.FormatStyle;
 @Slf4j
 @Component
 public class KafkaConsumer {
+
+    private final FetchUserInfoService fetchUserInfoService;
+
+    public KafkaConsumer(FetchUserInfoService fetchUserInfoService) {
+        this.fetchUserInfoService = fetchUserInfoService;
+    }
 
     @KafkaListener(topics = "${spring.kafka.notification-topic}", groupId = "${spring.kafka.consumer-group}", containerFactory = "concurrentKafkaListenerContainerFactory")
     public void consume(ConsumerRecord<String, NotificationDto> consumerRecord)
@@ -29,13 +37,14 @@ public class KafkaConsumer {
         NotificationDto notificationDto = consumerRecord.value();
 
         // fetch user info from auth provider ms
+        User user = fetchUserInfoService.getUserInfo(notificationDto.userId());
 
         //send notification
         String notificationMsg = "Notification for OrderId: " + notificationDto.orderId() +
                                 " ShipmentId: " + notificationDto.shipmentId() +
                                 ". Message: " + notificationDto.message() +
                                 " at " + formattedDateTime;
-        log.info("Notification: "+ notificationMsg + " Sent To: " + notificationDto.userId());
-        System.out.println("Notification: "+ notificationMsg + " Sent To: " + notificationDto.userId());
+        log.info("Notification: "+ notificationMsg + " Sent To: " + user.email());
+        System.out.println("Notification: "+ notificationMsg + " Sent To: " + user.email());
     }
 }

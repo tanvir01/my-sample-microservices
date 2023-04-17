@@ -5,10 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
 
@@ -49,6 +46,11 @@ public class AuthController {
         // Return response
         AuthResponse response = new AuthResponse(jwtToken);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/user/{id}")
+    public ResponseEntity<User> getOrderById(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getUserById(id).get());
     }
 }
 
