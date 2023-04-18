@@ -33,13 +33,8 @@ public class Shipment {
 
     @NotNull
     @Column(nullable = false)
-    @JsonProperty("address")
-    private String address;
-
-    @NotNull
-    @Column(nullable = false)
-    @JsonProperty("customerEmail")
-    private String customerEmail;
+    @JsonProperty("userId")
+    private Long userId;
 
     @NotNull
     @Column(nullable = false, unique=true)

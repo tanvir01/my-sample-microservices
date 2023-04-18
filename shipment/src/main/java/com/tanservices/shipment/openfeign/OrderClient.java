@@ -3,7 +3,7 @@ package com.tanservices.shipment.openfeign;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
-@FeignClient(value = "order", url = "${order-service.url}")
+@FeignClient(value = "order", url = "${order-service.url}", configuration = FeignConfiguration.class)
 public interface OrderClient {
 
     @GetMapping("/{orderId}")

@@ -63,15 +63,22 @@ public class ShipmentExceptionHandler {
     }
 
     @ExceptionHandler(OrderNotFoundException.class)
-    public ResponseEntity<ShipmentErrorResponse> handleFeignException(OrderNotFoundException ex) {
+    public ResponseEntity<ShipmentErrorResponse> handleOrderNotFoundException(OrderNotFoundException ex) {
         String errorMessage = "OrderNotFoundException: " + ex.getMessage();
         ShipmentErrorResponse shipmentErrorResponse = new ShipmentErrorResponse(HttpStatus.NOT_FOUND.value(), errorMessage);
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(shipmentErrorResponse);
     }
 
     @ExceptionHandler(InvalidStatusUpdateException.class)
-    public ResponseEntity<ShipmentErrorResponse> handleFeignException(InvalidStatusUpdateException ex) {
+    public ResponseEntity<ShipmentErrorResponse> handleInvalidStatusUpdateException(InvalidStatusUpdateException ex) {
         String errorMessage = "InvalidStatusUpdateException: " + ex.getMessage();
+        ShipmentErrorResponse shipmentErrorResponse = new ShipmentErrorResponse(HttpStatus.BAD_REQUEST.value(), errorMessage);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(shipmentErrorResponse);
+    }
+
+    @ExceptionHandler(InvalidCustomerException.class)
+    public ResponseEntity<ShipmentErrorResponse> handleInvalidCustomerException(InvalidCustomerException ex) {
+        String errorMessage = "InvalidCustomerException: " + ex.getMessage();
         ShipmentErrorResponse shipmentErrorResponse = new ShipmentErrorResponse(HttpStatus.BAD_REQUEST.value(), errorMessage);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(shipmentErrorResponse);
     }

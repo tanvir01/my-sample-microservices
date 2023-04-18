@@ -2,8 +2,7 @@ package com.tanservices.shipment.openfeign;
 
 public record Order(
         Long id,
-        String customerName,
-        String customerEmail,
+        Long userId,
         Double totalAmount,
         OrderStatus status) {
 }

@@ -1,10 +1,16 @@
 package com.tanservices.order;
 
 import com.tanservices.order.exception.OrderNotFoundException;
+import com.tanservices.order.security.JwtContextHolder;
+import com.tanservices.order.security.JwtService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import java.util.List;
 import java.util.Optional;
@@ -12,6 +18,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -26,6 +33,18 @@ public class OrderServiceIntegrationTest {
     @Autowired
     private OrderStateMachineService orderStateMachineService;
 
+    @MockBean
+    private JwtService jwtService;
+
+    @BeforeEach
+    void setUp() {
+        // set up mock authentication with the test user's id
+        String jwtToken = "test.jwt.token";
+        Claims claims = Jwts.claims().setSubject(String.valueOf(1L));
+        when(jwtService.getAllClaims(jwtToken)).thenReturn(claims);
+        JwtContextHolder.setJwtToken(jwtService, jwtToken);
+    }
+
     @Test
     @Transactional
     public void testGetAllOrders() {
@@ -33,8 +52,7 @@ public class OrderServiceIntegrationTest {
         Order order1 = createDummyOrder();
 
         Order order2 = new Order();
-        order2.setCustomerName("Jane Doe");
-        order2.setCustomerEmail("jane.doe@example.com");
+        order2.setUserId(1L);
         order2.setTotalAmount(223.10);
         order2.setStatus(OrderStatus.PENDING);
         orderRepository.save(order2);
@@ -75,7 +93,7 @@ public class OrderServiceIntegrationTest {
     @Transactional
     public void testCreateOrder() {
         // given
-        OrderRequest orderRequest = new OrderRequest("John Doe", "john.doe@example.com", 100.00);
+        OrderRequest orderRequest = new OrderRequest(100.00);
 
         // when
         Order createdOrder = orderService.createOrder(orderRequest);
@@ -91,14 +109,12 @@ public class OrderServiceIntegrationTest {
         Order existingOrder = createDummyOrder();
 
         Long id = existingOrder.getId();
-        OrderRequest orderRequest = new OrderRequest("Jane Doe", "jane.doe@example.com", 200.00);
+        OrderRequest orderRequest = new OrderRequest(200.00);
 
         // when
         Order updatedOrder = orderService.updateOrder(id, orderRequest);
 
         // then
-        assertThat(updatedOrder.getCustomerName()).isEqualTo(orderRequest.customerName());
-        assertThat(updatedOrder.getCustomerEmail()).isEqualTo(orderRequest.customerEmail());
         assertThat(updatedOrder.getTotalAmount()).isEqualTo(orderRequest.totalAmount());
     }
 
@@ -157,8 +173,7 @@ public class OrderServiceIntegrationTest {
 
     private Order createDummyOrder() {
         Order existingOrder = new Order();
-        existingOrder.setCustomerName("John Doe");
-        existingOrder.setCustomerEmail("john.doe@example.com");
+        existingOrder.setUserId(1L);
         existingOrder.setTotalAmount(100.00);
         existingOrder.setStatus(OrderStatus.PENDING);
         existingOrder = orderRepository.save(existingOrder);

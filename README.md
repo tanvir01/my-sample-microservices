@@ -2,4 +2,4 @@
 
 This is the architectural diagram of the project:
 
-<img src="images/project-architecture.jpg" alt="Alt text" title="Title" width="640" height="320">
+<img src="images/project-architecture.jpeg" alt="Alt text" title="Title" width="640" height="320">
