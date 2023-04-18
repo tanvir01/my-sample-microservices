@@ -7,11 +7,17 @@ import com.tanservices.shipment.openfeign.Order;
 import com.tanservices.shipment.openfeign.OrderClient;
 import com.tanservices.shipment.openfeign.OrderStatus;
 import com.tanservices.shipment.openfeign.OrderStatusRequest;
+import com.tanservices.shipment.security.JwtContextHolder;
+import com.tanservices.shipment.security.JwtService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import java.util.Optional;
@@ -39,6 +45,21 @@ public class ShipmentServiceIntegrationTest {
 
     @MockBean
     private KafkaTemplate<String, NotificationDto> kafkaTemplate;
+
+    @MockBean
+    private JwtService jwtService;
+
+    @SpyBean
+    private ShipmentService shipmentServiceSpy;
+
+    @BeforeEach
+    void setUp() {
+        // set up mock authentication with the test user's id
+        String jwtToken = "test.jwt.token";
+        Claims claims = Jwts.claims().setSubject(String.valueOf(1L));
+        when(jwtService.getAllClaims(jwtToken)).thenReturn(claims);
+        JwtContextHolder.setJwtToken(jwtService, jwtToken);
+    }
 
     @Test
     public void testGetAllShipments() {
@@ -75,25 +96,26 @@ public class ShipmentServiceIntegrationTest {
     public void testCreateShipment() {
         // given
         Long orderId = 1L;
-        String address = "123 Main St";
         String trackingCode = "123456sample101";
-
-        Order order = new Order(orderId, "John Doe", "john@gmail.com", 223.0, OrderStatus.PENDING);
+        Order order = new Order(orderId, 1L, 223.0, OrderStatus.PENDING);
         when(orderClient.getOrderById(orderId)).thenReturn(order);
 
         // when
-        ShipmentRequest request = new ShipmentRequest(orderId, address, trackingCode);
+        ShipmentRequest request = new ShipmentRequest(orderId, trackingCode);
         Shipment shipment = shipmentService.createShipment(request);
 
         // then
         assertThat(shipment.getOrderId()).isEqualTo(orderId);
         assertThat(shipment.getTrackingCode()).isEqualTo(trackingCode);
-        assertThat(shipment.getAddress()).isEqualTo(address);
+        assertThat(shipment.getUserId()).isEqualTo(order.userId());
         assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.NEW);
 
         OrderStatusRequest orderStatusRequest = new OrderStatusRequest(OrderStatus.PROCESSING);
         verify(orderClient).updateOrderStatus(orderId, orderStatusRequest);
+
+        verify(shipmentServiceSpy).sendNotificationToKafka(shipment, "Shipment created with tracking code: " + shipment.getTrackingCode());
     }
+
 
     @Test
     @Transactional
@@ -101,7 +123,7 @@ public class ShipmentServiceIntegrationTest {
         // given
         Shipment existingShipment = createDummyShipment();
 
-        ShipmentRequest shipmentRequest = new ShipmentRequest(existingShipment.getOrderId(), "456 Elm St", "DEF456");
+        ShipmentRequest shipmentRequest = new ShipmentRequest(existingShipment.getOrderId(), "DEF456");
 
         // when/then
         assertThatThrownBy(() -> shipmentService.createShipment(shipmentRequest))
@@ -115,7 +137,7 @@ public class ShipmentServiceIntegrationTest {
         // given
         Shipment existingShipment = createDummyShipment();
 
-        ShipmentRequest shipmentRequest = new ShipmentRequest(2L, "456 Elm St", existingShipment.getTrackingCode());
+        ShipmentRequest shipmentRequest = new ShipmentRequest(2L, existingShipment.getTrackingCode());
 
         // when/then
         assertThatThrownBy(() -> shipmentService.createShipment(shipmentRequest))
@@ -130,11 +152,11 @@ public class ShipmentServiceIntegrationTest {
         Shipment existingShipment = createDummyShipment();
 
         Long orderId = 2L;
-        Order order = new Order(orderId, "John Doe", "john@gmail.com", 223.0, OrderStatus.PENDING);
+        Order order = new Order(orderId, 1L, 223.0, OrderStatus.PENDING);
         when(orderClient.getOrderById(orderId)).thenReturn(order);
 
         Long id = existingShipment.getId();
-        ShipmentRequest shipmentRequest = new ShipmentRequest(orderId, "456 Elm St", "DEF456XYZ786");
+        ShipmentRequest shipmentRequest = new ShipmentRequest(orderId, "DEF456XYZ786");
 
         // when
         Shipment updatedShipment = shipmentService.updateShipment(id, shipmentRequest);
@@ -143,8 +165,10 @@ public class ShipmentServiceIntegrationTest {
         assertThat(updatedShipment).isNotNull();
         assertThat(updatedShipment.getId()).isEqualTo(id);
         assertThat(updatedShipment.getOrderId()).isEqualTo(shipmentRequest.orderId());
-        assertThat(updatedShipment.getAddress()).isEqualTo(shipmentRequest.address());
         assertThat(updatedShipment.getTrackingCode()).isEqualTo(shipmentRequest.trackingCode());
+
+        verify(shipmentServiceSpy).sendNotificationToKafka(updatedShipment, "Shipment with tracking code: " +
+                updatedShipment.getTrackingCode() + "has been updated");
     }
 
     @Test
@@ -160,6 +184,9 @@ public class ShipmentServiceIntegrationTest {
         // then
         Shipment updatedShipment = (shipmentRepository.findById(existingShipment.getId())).get();
         assertThat(updatedShipment.getStatus()).isEqualTo(ShipmentStatus.COMPLETED);
+
+        verify(shipmentServiceSpy).sendNotificationToKafka(updatedShipment, "Shipment with tracking code: " +
+                updatedShipment.getTrackingCode() + "has been updated to status: " + updatedShipment.getStatus());
     }
 
 
@@ -175,6 +202,9 @@ public class ShipmentServiceIntegrationTest {
         //then
         Optional<Shipment> shipment = shipmentRepository.findById(existingShipment.getId());
         assertThat(shipment).isEmpty();
+
+        verify(shipmentServiceSpy).sendNotificationToKafka(existingShipment, "Shipment with tracking code: " +
+                existingShipment.getTrackingCode() + "has been deleted");
     }
 
     @Test
@@ -189,13 +219,15 @@ public class ShipmentServiceIntegrationTest {
         // then
         Shipment updatedShipment = (shipmentRepository.findById(existingShipment.getId())).get();
         assertThat(updatedShipment.getStatus()).isEqualTo(ShipmentStatus.CANCELLED);
+
+        verify(shipmentServiceSpy).sendNotificationToKafka(existingShipment, "Shipment with tracking code: " +
+                existingShipment.getTrackingCode() + "has been CANCELLED");
     }
 
     private Shipment createDummyShipment() {
         Shipment existingShipment = Shipment.builder()
                 .orderId(1L)
-                .address("123 Main St")
-                .customerEmail("random@gmail.com")
+                .userId(1L)
                 .trackingCode("ABC123XYZ786")
                 .status(ShipmentStatus.NEW)
                 .build();

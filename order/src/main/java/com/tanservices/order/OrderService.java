@@ -3,6 +3,7 @@ package com.tanservices.order;
 import com.tanservices.order.exception.InvalidStatusUpdateException;
 import com.tanservices.order.exception.OrderNotFoundException;
 import com.tanservices.order.openfeign.ShipmentClient;
+import com.tanservices.order.security.JwtContextHolder;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,18 +30,18 @@ public class OrderService {
     }
 
     public List<Order> getAllOrders() {
-        return orderRepository.findAll();
+        return orderRepository.findByUserId(JwtContextHolder.getUserId());
     }
 
     public Optional<Order> getOrderById(Long id) {
-        return Optional.ofNullable(orderRepository.findById(id)
+        return Optional.ofNullable(orderRepository.findByIdAndUserId(id, JwtContextHolder.getUserId())
                 .orElseThrow(() -> new OrderNotFoundException(id)));
     }
 
+
     public Order createOrder(OrderRequest orderRequest) {
         Order order = Order.builder()
-                .customerName(orderRequest.customerName())
-                .customerEmail(orderRequest.customerEmail())
+                .userId(JwtContextHolder.getUserId())
                 .totalAmount(orderRequest.totalAmount())
                 .status(OrderStatus.PENDING)
                 .build();
@@ -50,12 +51,10 @@ public class OrderService {
 
     public Order updateOrder(Long id, OrderRequest orderRequest) {
         // Check if the shipment exists with the given shipmentId
-        Order existingOrder = orderRepository.findById(id)
+        Order existingOrder = orderRepository.findByIdAndUserId(id, JwtContextHolder.getUserId())
                 .orElseThrow(() -> new OrderNotFoundException(id));
 
         // Update the order
-        existingOrder.setCustomerName(orderRequest.customerName());
-        existingOrder.setCustomerEmail(orderRequest.customerEmail());
         existingOrder.setTotalAmount(orderRequest.totalAmount());
         orderRepository.save(existingOrder);
 
@@ -63,7 +62,10 @@ public class OrderService {
     }
 
     public void deleteOrder(Long id) {
-        orderRepository.deleteById(id);
+        Order existingOrder = orderRepository.findByIdAndUserId(id, JwtContextHolder.getUserId())
+                .orElseThrow(() -> new OrderNotFoundException(id));
+
+        orderRepository.delete(existingOrder);
     }
 
     public void updateOrderStatus(Long id, OrderStatusRequest orderStatusRequest) {
@@ -73,7 +75,7 @@ public class OrderService {
                     "The shipment needs to be COMPLETED.");
         }
 
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.findByIdAndUserId(id, JwtContextHolder.getUserId())
                 .orElseThrow(() -> new OrderNotFoundException(id));
 
         log.info("Status Requested for orderId " + order.getId() + " is " + orderStatusRequest.status());
@@ -105,7 +107,7 @@ public class OrderService {
     }
 
     public void markOrderCompleted(Long id) {
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.findByIdAndUserId(id, JwtContextHolder.getUserId())
                 .orElseThrow(() -> new OrderNotFoundException(id));
 
         orderStateMachineService.processOrderState(order, OrderStateMachine.OrderEvent.COMPLETE);
