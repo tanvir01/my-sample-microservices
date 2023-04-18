@@ -218,7 +218,7 @@ public class ShipmentService {
      void sendNotificationToKafka(Shipment shipment, String message) {
         String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
         NotificationDto notificationDto = new NotificationDto(shipment.getOrderId(), shipment.getId(),
-                                                                shipment.getUserId(), message);
+                                                                JwtContextHolder.getJwtToken(), message);
         log.info("Sending payload to kafka for shipment id: " + shipment.getId() + " with message: " +
                 message + " at timestamp " + timeStamp);
         kafkaTemplate.send(noticationTopic, timeStamp, notificationDto);

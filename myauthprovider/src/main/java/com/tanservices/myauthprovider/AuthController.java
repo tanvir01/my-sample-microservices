@@ -1,5 +1,7 @@
 package com.tanservices.myauthprovider;
 
+import com.tanservices.myauthprovider.security.JwtContextHolder;
+import com.tanservices.myauthprovider.security.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -41,8 +43,6 @@ public class AuthController {
         // Generate JWT token
         String jwtToken = jwtService.generateToken(user.get());
 
-        System.out.println(jwtService.getUserInfoFromToken(jwtToken));
-
         // Return response
         AuthResponse response = new AuthResponse(jwtToken);
         return ResponseEntity.ok(response);
@@ -50,6 +50,9 @@ public class AuthController {
 
     @GetMapping("/user/{id}")
     public ResponseEntity<User> getOrderById(@PathVariable Long id) {
+        if (id != JwtContextHolder.getUserId()) {
+            throw new BadCredentialsException("Not Allowed. You can only get details about the user in the token.");
+        }
         return ResponseEntity.ok(userService.getUserById(id).get());
     }
 }

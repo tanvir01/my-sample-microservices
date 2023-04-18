@@ -35,8 +35,6 @@ public class KafkaConfig {
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
         config.put(JsonDeserializer.TRUSTED_PACKAGES, "com.tanservices.shipment.kafka");
-        //config.put(JsonDeserializer.TYPE_MAPPINGS, "yourNotificationDto:com.tanservices.shipment.kafka.NotificationDto, myNotificationDto:com.tanservices.notification.kafka.NotificationDto");
-
 
         return new DefaultKafkaConsumerFactory<>(config);
     }
